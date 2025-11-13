@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import PermissionManager from "@/components/PermissionManager";
 import FilePreview from "@/components/FilePreview";
+import VersionHistory from "@/components/VersionHistory";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,8 @@ import {
   Search,
   SortAsc,
   SortDesc,
-  Filter
+  Filter,
+  History
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedFolderForPermissions, setSelectedFolderForPermissions] = useState<{ id: number; name: string } | null>(null);
   const [previewFile, setPreviewFile] = useState<{ id: number; name: string; url: string; mimeType: string | null } | null>(null);
+  const [versionHistoryFile, setVersionHistoryFile] = useState<{ id: number; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Sorting and filtering state
@@ -444,6 +447,14 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                       >
                         <Download className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setVersionHistoryFile({ id: file.id, name: file.name })}
+                        title="Version History"
+                      >
+                        <History className="w-4 h-4" />
+                      </Button>
                       {isAdmin && (
                         <Button
                           variant="ghost"
@@ -590,6 +601,17 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
           open={!!previewFile}
           onOpenChange={(open) => !open && setPreviewFile(null)}
           isAdmin={isAdmin}
+        />
+      )}
+
+      {/* Version History */}
+      {versionHistoryFile && (
+        <VersionHistory
+          fileId={versionHistoryFile.id}
+          fileName={versionHistoryFile.name}
+          isOpen={!!versionHistoryFile}
+          onClose={() => setVersionHistoryFile(null)}
+          canEdit={isAdmin}
         />
       )}
     </div>

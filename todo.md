@@ -105,3 +105,20 @@
 - [ ] Add date range filter
 - [x] Make sorting/filtering mobile-responsive
 - [ ] Persist sort/filter preferences in local storage
+
+## File Version History
+- [x] Add file_versions table to database schema
+- [x] Add version number tracking to files
+- [x] Store version metadata (timestamp, user, file size, change description)
+- [x] Implement backend procedure to create new version on file update
+- [x] Implement backend procedure to list all versions for a file
+- [x] Implement backend procedure to restore previous version
+- [x] Implement backend procedure to download specific version
+- [x] Build version history UI component
+- [x] Add version list modal/panel
+- [x] Display version timeline with user attribution
+- [x] Add restore version functionality
+- [x] Add download specific version functionality
+- [x] Add version preview functionality
+- [x] Track version changes in audit log
+- [x] Test version history across all user roles

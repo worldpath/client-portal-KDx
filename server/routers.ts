@@ -236,9 +236,22 @@ export const appRouter = router({
           size: input.size,
           folderId: input.folderId,
           uploadedBy: ctx.user.id,
+          currentVersion: 1,
         });
 
         const fileId = Number((result as any).insertId);
+        
+        // Create initial version record
+        await db.createFileVersion({
+          fileId,
+          versionNumber: 1,
+          fileKey,
+          url,
+          size: input.size,
+          changeDescription: 'Initial upload',
+          uploadedBy: ctx.user.id,
+        });
+        
         await logAction(ctx.user.id, 'file_upload', 'file', fileId, { 
           name: input.name, 
           folderId: input.folderId,
@@ -330,6 +343,7 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         content: z.string(), // base64 encoded new content
+        changeDescription: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const file = await db.getFileById(input.id);
@@ -351,11 +365,146 @@ export const appRouter = router({
         const fileKey = `files/${ctx.user.id}/${file.folderId}/${randomSuffix}-${file.name}`;
         
         const { url } = await storagePut(fileKey, buffer, file.mimeType || 'text/plain');
+        const newSize = buffer.length;
+        const newVersion = file.currentVersion + 1;
 
+        // Create version record
+        await db.createFileVersion({
+          fileId: input.id,
+          versionNumber: newVersion,
+          fileKey,
+          url,
+          size: newSize,
+          changeDescription: input.changeDescription || 'File updated',
+          uploadedBy: ctx.user.id,
+        });
+
+        // Update file with new version
         await db.updateFileContent(input.id, url, fileKey);
-        await logAction(ctx.user.id, 'file_edit', 'file', input.id, { name: file.name }, ctx.req);
+        await db.updateFile(input.id, { currentVersion: newVersion });
+        
+        await logAction(ctx.user.id, 'file_edit', 'file', input.id, { 
+          name: file.name,
+          version: newVersion 
+        }, ctx.req);
 
-        return { success: true, url };
+        return { success: true, url, version: newVersion };
+      }),
+
+    // Version history procedures
+    getVersions: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+
+        // Check folder permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission || !permission.canView) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+          }
+        }
+
+        const versions = await db.getFileVersions(input.fileId);
+        
+        // Get user info for each version
+        const versionsWithUsers = await Promise.all(
+          versions.map(async (version) => {
+            const user = await db.getUserById(version.uploadedBy);
+            return {
+              ...version,
+              uploadedByName: user?.name || 'Unknown',
+            };
+          })
+        );
+
+        return versionsWithUsers;
+      }),
+
+    restoreVersion: protectedProcedure
+      .input(z.object({ 
+        fileId: z.number(),
+        versionNumber: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+
+        // Check permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission || !permission.canEdit) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Edit permission denied' });
+          }
+        }
+
+        // Get the version to restore
+        const version = await db.getFileVersion(input.fileId, input.versionNumber);
+        if (!version) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Version not found' });
+        }
+
+        const newVersion = file.currentVersion + 1;
+
+        // Create new version record (restore creates a new version)
+        await db.createFileVersion({
+          fileId: input.fileId,
+          versionNumber: newVersion,
+          fileKey: version.fileKey,
+          url: version.url,
+          size: version.size,
+          changeDescription: `Restored from version ${input.versionNumber}`,
+          uploadedBy: ctx.user.id,
+        });
+
+        // Update file to point to restored version
+        await db.updateFileContent(input.fileId, version.url, version.fileKey);
+        await db.updateFile(input.fileId, { currentVersion: newVersion });
+        
+        await logAction(ctx.user.id, 'file_version_restore', 'file', input.fileId, { 
+          name: file.name,
+          restoredVersion: input.versionNumber,
+          newVersion 
+        }, ctx.req);
+
+        return { success: true, version: newVersion };
+      }),
+
+    downloadVersion: protectedProcedure
+      .input(z.object({ 
+        fileId: z.number(),
+        versionNumber: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+
+        // Check folder permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission || !permission.canView) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+          }
+        }
+
+        const version = await db.getFileVersion(input.fileId, input.versionNumber);
+        if (!version) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Version not found' });
+        }
+
+        await logAction(ctx.user.id, 'file_version_download', 'file', input.fileId, { 
+          name: file.name,
+          version: input.versionNumber 
+        }, ctx.req);
+
+        return { url: version.url, name: file.name };
       }),
   }),
 

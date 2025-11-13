@@ -5,6 +5,7 @@ import {
   userInvitations, InsertUserInvitation,
   folders, InsertFolder,
   files, InsertFile,
+  fileVersions, InsertFileVersion,
   folderPermissions, InsertFolderPermission,
   auditLogs, InsertAuditLog
 } from "../drizzle/schema";
@@ -243,6 +244,13 @@ export async function updateFileContent(id: number, url: string, fileKey: string
   await db.update(files).set({ url, fileKey }).where(eq(files.id, id));
 }
 
+export async function updateFile(id: number, updates: Partial<InsertFile>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(files).set(updates).where(eq(files.id, id));
+}
+
 // ============ PERMISSION OPERATIONS ============
 
 export async function grantFolderPermission(permission: InsertFolderPermission) {
@@ -344,4 +352,52 @@ export async function getRecentAuditLogs(limit: number = 100) {
   return await db.select().from(auditLogs)
     .orderBy(desc(auditLogs.createdAt))
     .limit(limit);
+}
+
+// ============ FILE VERSION OPERATIONS ============
+
+export async function createFileVersion(version: InsertFileVersion) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(fileVersions).values(version);
+  return result;
+}
+
+export async function getFileVersions(fileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select()
+    .from(fileVersions)
+    .where(eq(fileVersions.fileId, fileId))
+    .orderBy(desc(fileVersions.versionNumber));
+}
+
+export async function getFileVersion(fileId: number, versionNumber: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select()
+    .from(fileVersions)
+    .where(and(
+      eq(fileVersions.fileId, fileId),
+      eq(fileVersions.versionNumber, versionNumber)
+    ))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getLatestFileVersion(fileId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select()
+    .from(fileVersions)
+    .where(eq(fileVersions.fileId, fileId))
+    .orderBy(desc(fileVersions.versionNumber))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
 }

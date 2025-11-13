@@ -69,6 +69,7 @@ export const files = mysqlTable("files", {
   size: int("size").notNull(), // bytes
   folderId: int("folderId").notNull(),
   uploadedBy: int("uploadedBy").notNull(),
+  currentVersion: int("currentVersion").default(1).notNull(), // Current version number
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -78,6 +79,28 @@ export const files = mysqlTable("files", {
 
 export type File = typeof files.$inferSelect;
 export type InsertFile = typeof files.$inferInsert;
+
+/**
+ * File versions table for tracking version history
+ */
+export const fileVersions = mysqlTable("file_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(), // Reference to parent file
+  versionNumber: int("versionNumber").notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(), // S3 key for this version
+  url: text("url").notNull(), // S3 URL for this version
+  size: int("size").notNull(), // bytes
+  changeDescription: text("changeDescription"), // Optional description of changes
+  uploadedBy: int("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  fileIdx: index("file_idx").on(table.fileId),
+  fileVersionIdx: index("file_version_idx").on(table.fileId, table.versionNumber),
+  uploadedByIdx: index("uploaded_by_idx").on(table.uploadedBy),
+}));
+
+export type FileVersion = typeof fileVersions.$inferSelect;
+export type InsertFileVersion = typeof fileVersions.$inferInsert;
 
 /**
  * Folder permissions table for granular access control

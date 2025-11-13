@@ -139,3 +139,19 @@
 - [x] Add audit logging for bulk operations
 - [x] Make bulk operations mobile-responsive
 - [x] Test bulk operations with large file sets
+
+## Global Search Feature
+- [x] Add global search bar in header/navigation
+- [x] Implement backend search by file name
+- [ ] Implement backend search by file content (text files)
+- [x] Add permission filtering to search results
+- [x] Build search results page with file cards
+- [x] Display folder breadcrumbs for each result
+- [x] Add click-to-navigate to file location
+- [ ] Implement search result highlighting
+- [ ] Add filter options (file type, date range, folder)
+- [ ] Add recent searches functionality
+- [x] Make search mobile-responsive
+- [x] Add empty state for no results
+- [x] Test search performance with large datasets
+- [x] Add search to audit logs

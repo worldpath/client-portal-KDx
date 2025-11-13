@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, 
@@ -400,4 +400,88 @@ export async function getLatestFileVersion(fileId: number) {
     .limit(1);
   
   return result.length > 0 ? result[0] : null;
+}
+
+// ============ SEARCH OPERATIONS ============
+
+export async function searchFiles(query: string, userId: number, userRole: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Search by file name using LIKE
+  const searchPattern = `%${query}%`;
+  
+  if (userRole === 'admin') {
+    // Admin can search all files
+    return await db.select({
+      id: files.id,
+      name: files.name,
+      size: files.size,
+      mimeType: files.mimeType,
+      url: files.url,
+      fileKey: files.fileKey,
+      folderId: files.folderId,
+      createdAt: files.createdAt,
+      folderName: folders.name,
+    })
+      .from(files)
+      .leftJoin(folders, eq(files.folderId, folders.id))
+      .where(like(files.name, searchPattern))
+      .orderBy(desc(files.createdAt))
+      .limit(100);
+  } else {
+    // Clients can only search files in folders they have access to
+    const accessibleFolderIds = await db.select({ folderId: folderPermissions.folderId })
+      .from(folderPermissions)
+      .where(and(
+        eq(folderPermissions.userId, userId),
+        eq(folderPermissions.canView, true)
+      ));
+    
+    if (accessibleFolderIds.length === 0) return [];
+    
+    const folderIds = accessibleFolderIds.map(f => f.folderId);
+    
+    return await db.select({
+      id: files.id,
+      name: files.name,
+      size: files.size,
+      mimeType: files.mimeType,
+      url: files.url,
+      fileKey: files.fileKey,
+      folderId: files.folderId,
+      createdAt: files.createdAt,
+      folderName: folders.name,
+    })
+      .from(files)
+      .leftJoin(folders, eq(files.folderId, folders.id))
+      .where(and(
+        like(files.name, searchPattern),
+        inArray(files.folderId, folderIds)
+      ))
+      .orderBy(desc(files.createdAt))
+      .limit(100);
+  }
+}
+
+export async function getFolderPath(folderId: number): Promise<Array<{ id: number; name: string }>> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const path: Array<{ id: number; name: string }> = [];
+  let currentId: number | null = folderId;
+  
+  while (currentId !== null) {
+    const folder = await db.select()
+      .from(folders)
+      .where(eq(folders.id, currentId))
+      .limit(1);
+    
+    if (folder.length === 0) break;
+    
+    path.unshift({ id: folder[0].id, name: folder[0].name });
+    currentId = folder[0].parentId;
+  }
+  
+  return path;
 }

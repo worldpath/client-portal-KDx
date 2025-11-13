@@ -713,6 +713,40 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ SEARCH ============
+  search: router({
+    files: protectedProcedure
+      .input(z.object({
+        query: z.string().min(1),
+      }))
+      .query(async ({ input, ctx }) => {
+        const results = await db.searchFiles(input.query, ctx.user.id, ctx.user.role);
+        
+        // Get folder paths for each result
+        const resultsWithPaths = await Promise.all(
+          results.map(async (file) => {
+            const folderPath = await db.getFolderPath(file.folderId);
+            return {
+              ...file,
+              folderPath,
+            };
+          })
+        );
+        
+        // Log search action
+        await logAction(
+          ctx.user.id,
+          'search',
+          'file',
+          undefined,
+          { query: input.query, resultCount: results.length },
+          ctx.req
+        );
+        
+        return resultsWithPaths;
+      }),
+  }),
+
   // ============ AUDIT LOGS ============
   audit: router({
     list: adminProcedure

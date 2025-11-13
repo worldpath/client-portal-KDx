@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon } from "lucide-react";
+import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search } from "lucide-react";
 import { APP_TITLE } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -66,6 +66,14 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setLocation('/search')}
+              title="Search files"
+            >
+              <Search className="w-5 h-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"

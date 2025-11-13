@@ -51,6 +51,12 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [sortBy, setSortBy] = useState<"name" | "date" | "size" | "type">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filterType, setFilterType] = useState<string>("all");
+  
+  // Bulk selection state
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<number>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [targetFolderId, setTargetFolderId] = useState<number | undefined>(undefined);
 
   const utils = trpc.useUtils();
 
@@ -183,6 +189,51 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
     },
   });
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = trpc.files.bulkDelete.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} file(s) deleted successfully`);
+      setSelectedFileIds(new Set());
+      utils.files.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete files");
+    },
+  });
+
+  // Bulk move mutation
+  const bulkMoveMutation = trpc.files.bulkMove.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} file(s) moved successfully`);
+      setSelectedFileIds(new Set());
+      setShowMoveDialog(false);
+      setTargetFolderId(undefined);
+      utils.files.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to move files");
+    },
+  });
+
+  // Bulk download mutation
+  const bulkDownloadMutation = trpc.files.bulkDownload.useMutation({
+    onSuccess: (data) => {
+      // Download each file
+      data.files.forEach(file => {
+        const link = document.createElement('a');
+        link.href = file.url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+      toast.success(`${data.files.length} file(s) downloaded`);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to download files");
+    },
+  });
+
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) {
       toast.error("Please enter a folder name");
@@ -231,6 +282,50 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
 
   const handleDownloadFile = (fileId: number) => {
     downloadFileMutation.mutate({ id: fileId });
+  };
+
+  // Bulk operation handlers
+  const toggleFileSelection = (fileId: number) => {
+    const newSelection = new Set(selectedFileIds);
+    if (newSelection.has(fileId)) {
+      newSelection.delete(fileId);
+    } else {
+      newSelection.add(fileId);
+    }
+    setSelectedFileIds(newSelection);
+  };
+
+  const selectAllFiles = () => {
+    const allFileIds = new Set(filteredAndSortedFiles.map(f => f.id));
+    setSelectedFileIds(allFileIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedFileIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedFileIds.size === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedFileIds.size} file(s)?`)) {
+      bulkDeleteMutation.mutate({ fileIds: Array.from(selectedFileIds) });
+    }
+  };
+
+  const handleBulkMove = () => {
+    if (selectedFileIds.size === 0) return;
+    if (targetFolderId === undefined) {
+      toast.error("Please select a target folder");
+      return;
+    }
+    bulkMoveMutation.mutate({ 
+      fileIds: Array.from(selectedFileIds),
+      targetFolderId 
+    });
+  };
+
+  const handleBulkDownload = () => {
+    if (selectedFileIds.size === 0) return;
+    bulkDownloadMutation.mutate({ fileIds: Array.from(selectedFileIds) });
   };
 
   const formatFileSize = (bytes: number) => {
@@ -352,6 +447,67 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
       {/* Files List */}
       {currentFolderId !== undefined && (
         <div className="space-y-4">
+          {/* Bulk Actions Toolbar */}
+          {selectedFileIds.size > 0 && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {selectedFileIds.size} file(s) selected
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {filteredAndSortedFiles.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllFiles}
+                    >
+                      Select All
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkDownload}
+                    disabled={bulkDownloadMutation.isPending}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Download
+                  </Button>
+                  {isAdmin && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMoveDialog(true)}
+                      >
+                        Move
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleteMutation.isPending}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h3 className="text-lg font-semibold text-foreground">Files</h3>
             
@@ -422,6 +578,12 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                 <Card key={file.id} className="border-border/50">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedFileIds.has(file.id)}
+                        onChange={() => toggleFileSelection(file.id)}
+                        className="w-4 h-4 rounded border-border cursor-pointer"
+                      />
                       <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
                         <File className="w-5 h-5 text-accent" />
                       </div>
@@ -573,6 +735,47 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
             <Button onClick={handleUploadFile} disabled={uploadFileMutation.isPending}>
               {uploadFileMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Move Dialog */}
+      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Files</DialogTitle>
+            <DialogDescription>
+              Select a folder to move {selectedFileIds.size} file(s) to
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Target Folder</Label>
+              <select
+                value={targetFolderId}
+                onChange={(e) => setTargetFolderId(Number(e.target.value))}
+                className="w-full p-2 border border-border rounded-md bg-background text-foreground"
+              >
+                <option value="">Select a folder...</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMoveDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkMove} 
+              disabled={bulkMoveMutation.isPending || targetFolderId === undefined}
+            >
+              {bulkMoveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Move Files
             </Button>
           </DialogFooter>
         </DialogContent>

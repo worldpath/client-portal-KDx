@@ -506,6 +506,140 @@ export const appRouter = router({
 
         return { url: version.url, name: file.name };
       }),
+
+    // Bulk operations
+    bulkDelete: protectedProcedure
+      .input(z.object({ fileIds: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.fileIds.length === 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'No files selected' });
+        }
+
+        // Check permissions for each file
+        const files = await Promise.all(
+          input.fileIds.map(id => db.getFileById(id))
+        );
+
+        for (const file of files) {
+          if (!file) continue;
+          
+          if (ctx.user.role === 'client') {
+            const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+            if (!permission || !permission.canDelete) {
+              throw new TRPCError({ 
+                code: 'FORBIDDEN', 
+                message: `Delete permission denied for file: ${file.name}` 
+              });
+            }
+          }
+        }
+
+        // Delete all files
+        await Promise.all(
+          input.fileIds.map(id => db.deleteFile(id))
+        );
+
+        await logAction(ctx.user.id, 'bulk_file_delete', 'file', undefined, { 
+          fileIds: input.fileIds,
+          count: input.fileIds.length 
+        }, ctx.req);
+
+        return { success: true, count: input.fileIds.length };
+      }),
+
+    bulkMove: protectedProcedure
+      .input(z.object({ 
+        fileIds: z.array(z.number()),
+        targetFolderId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.fileIds.length === 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'No files selected' });
+        }
+
+        // Check source permissions
+        const files = await Promise.all(
+          input.fileIds.map(id => db.getFileById(id))
+        );
+
+        for (const file of files) {
+          if (!file) continue;
+          
+          if (ctx.user.role === 'client') {
+            const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+            if (!permission || !permission.canDelete) {
+              throw new TRPCError({ 
+                code: 'FORBIDDEN', 
+                message: `Move permission denied for file: ${file.name}` 
+              });
+            }
+          }
+        }
+
+        // Check target folder permission
+        if (ctx.user.role === 'client') {
+          const targetPermission = await db.getFolderPermission(input.targetFolderId, ctx.user.id);
+          if (!targetPermission || !targetPermission.canUpload) {
+            throw new TRPCError({ 
+              code: 'FORBIDDEN', 
+              message: 'Upload permission denied for target folder' 
+            });
+          }
+        }
+
+        // Move all files
+        await Promise.all(
+          input.fileIds.map(id => 
+            db.updateFile(id, { folderId: input.targetFolderId })
+          )
+        );
+
+        await logAction(ctx.user.id, 'bulk_file_move', 'file', undefined, { 
+          fileIds: input.fileIds,
+          targetFolderId: input.targetFolderId,
+          count: input.fileIds.length 
+        }, ctx.req);
+
+        return { success: true, count: input.fileIds.length };
+      }),
+
+    bulkDownload: protectedProcedure
+      .input(z.object({ fileIds: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.fileIds.length === 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'No files selected' });
+        }
+
+        // Check permissions and get file info
+        const fileInfos = [];
+        for (const fileId of input.fileIds) {
+          const file = await db.getFileById(fileId);
+          if (!file) continue;
+
+          if (ctx.user.role === 'client') {
+            const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+            if (!permission || !permission.canView) {
+              throw new TRPCError({ 
+                code: 'FORBIDDEN', 
+                message: `Access denied for file: ${file.name}` 
+              });
+            }
+          }
+
+          fileInfos.push({
+            id: file.id,
+            name: file.name,
+            url: file.url,
+          });
+        }
+
+        await logAction(ctx.user.id, 'bulk_file_download', 'file', undefined, { 
+          fileIds: input.fileIds,
+          count: fileInfos.length 
+        }, ctx.req);
+
+        return { files: fileInfos };
+      }),
   }),
 
   // ============ PERMISSIONS MANAGEMENT ============

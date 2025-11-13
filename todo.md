@@ -122,3 +122,20 @@
 - [x] Add version preview functionality
 - [x] Track version changes in audit log
 - [x] Test version history across all user roles
+
+## Bulk File Operations
+- [x] Add multi-select checkbox UI for files
+- [x] Add "Select All" / "Deselect All" functionality
+- [x] Add selection counter display
+- [x] Implement bulk download as ZIP archive
+- [x] Implement bulk move to different folder
+- [x] Implement bulk delete with confirmation
+- [x] Add bulk action toolbar when files are selected
+- [x] Add clear selection button
+- [x] Implement backend procedure for bulk download (ZIP creation)
+- [x] Implement backend procedure for bulk move
+- [x] Implement backend procedure for bulk delete
+- [x] Add permission checks for bulk operations
+- [x] Add audit logging for bulk operations
+- [x] Make bulk operations mobile-responsive
+- [x] Test bulk operations with large file sets

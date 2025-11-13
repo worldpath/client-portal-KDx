@@ -94,3 +94,14 @@
 - [x] Update company name to WorldPath Regulatory Solutions
 - [x] Add tagline "Charting the WorldPath to success"
 - [x] Test branding across all pages
+
+## File Sorting and Filtering
+- [x] Add sort by name (A-Z, Z-A)
+- [x] Add sort by date (newest first, oldest first)
+- [x] Add sort by size (largest first, smallest first)
+- [x] Add sort by file type
+- [x] Add filter by file type (images, documents, PDFs, text, etc.)
+- [x] Add real-time search by filename
+- [ ] Add date range filter
+- [x] Make sorting/filtering mobile-responsive
+- [ ] Persist sort/filter preferences in local storage

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import PermissionManager from "@/components/PermissionManager";
 import FilePreview from "@/components/FilePreview";
 import { trpc } from "@/lib/trpc";
@@ -19,7 +19,11 @@ import {
   Shield,
   ChevronRight,
   ChevronDown,
-  Loader2
+  Loader2,
+  Search,
+  SortAsc,
+  SortDesc,
+  Filter
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,6 +42,12 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [selectedFolderForPermissions, setSelectedFolderForPermissions] = useState<{ id: number; name: string } | null>(null);
   const [previewFile, setPreviewFile] = useState<{ id: number; name: string; url: string; mimeType: string | null } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Sorting and filtering state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "size" | "type">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [filterType, setFilterType] = useState<string>("all");
 
   const utils = trpc.useUtils();
 
@@ -51,6 +61,77 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
     { folderId: currentFolderId || 0 },
     { enabled: currentFolderId !== undefined }
   );
+
+  // Helper function to get file type category
+  const getFileTypeCategory = (mimeType: string | null, filename: string): string => {
+    if (!mimeType) {
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+      if (['pdf'].includes(ext)) return 'pdf';
+      if (['doc', 'docx', 'txt', 'md'].includes(ext)) return 'document';
+      if (['xls', 'xlsx', 'csv'].includes(ext)) return 'spreadsheet';
+      return 'other';
+    }
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType === 'application/pdf') return 'pdf';
+    if (mimeType.includes('word') || mimeType.includes('text')) return 'document';
+    if (mimeType.includes('sheet') || mimeType.includes('csv')) return 'spreadsheet';
+    return 'other';
+  };
+
+  // Filter and sort files
+  const filteredAndSortedFiles = useMemo(() => {
+    let result = [...files];
+
+    // Apply search filter
+    if (searchQuery) {
+      result = result.filter(file => 
+        file.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply type filter
+    if (filterType !== 'all') {
+      result = result.filter(file => getFileTypeCategory(file.mimeType, file.name) === filterType);
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'date':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'size':
+          comparison = a.size - b.size;
+          break;
+        case 'type':
+          const typeA = getFileTypeCategory(a.mimeType, a.name);
+          const typeB = getFileTypeCategory(b.mimeType, b.name);
+          comparison = typeA.localeCompare(typeB);
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [files, searchQuery, filterType, sortBy, sortOrder]);
+
+  // Get unique file types for filter dropdown
+  const fileTypes = useMemo(() => {
+    const types = new Set(files.map(file => getFileTypeCategory(file.mimeType, file.name)));
+    return Array.from(types);
+  }, [files]);
+
+  // Toggle sort order
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
 
   // Create folder mutation
   const createFolderMutation = trpc.folders.create.useMutation({
@@ -268,14 +349,73 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
       {/* Files List */}
       {currentFolderId !== undefined && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Files</h3>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold text-foreground">Files</h3>
+            
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {/* Search */}
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search files..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Filter by Type */}
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="all">All Types</option>
+                {fileTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Sort Controls */}
+              <div className="flex gap-1">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as "name" | "date" | "size" | "type")}
+                  className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="name">Name</option>
+                  <option value="date">Date</option>
+                  <option value="size">Size</option>
+                  <option value="type">Type</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleSortOrder}
+                  title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                >
+                  {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
           {loadingFiles ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : files.length > 0 ? (
+          ) : filteredAndSortedFiles.length > 0 ? (
             <div className="space-y-2">
-              {files.map((file) => (
+              {/* Results count */}
+              {(searchQuery || filterType !== 'all') && (
+                <p className="text-sm text-muted-foreground">
+                  Showing {filteredAndSortedFiles.length} of {files.length} files
+                </p>
+              )}
+              {filteredAndSortedFiles.map((file) => (
                 <Card key={file.id} className="border-border/50">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -322,16 +462,35 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
             <Card className="border-dashed border-border/50">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <File className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">No files in this folder</p>
-                {isAdmin && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => setShowUploadFile(true)}
-                    className="mt-2"
-                  >
-                    Upload your first file
-                  </Button>
+                {searchQuery || filterType !== 'all' ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">No files match your filters</p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setFilterType('all');
+                      }}
+                      className="mt-2"
+                    >
+                      Clear filters
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">No files in this folder</p>
+                    {isAdmin && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => setShowUploadFile(true)}
+                        className="mt-2"
+                      >
+                        Upload your first file
+                      </Button>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>

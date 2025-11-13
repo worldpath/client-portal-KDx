@@ -1,22 +1,16 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, index } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
+ * Extended with role field for admin/client access control.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["admin", "client"]).default("client").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -25,4 +19,107 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * User invitations table for email-based invites
+ */
+export const userInvitations = mysqlTable("user_invitations", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["admin", "client"]).default("client").notNull(),
+  invitedBy: int("invitedBy").notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "accepted", "expired"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  emailIdx: index("email_idx").on(table.email),
+  tokenIdx: index("token_idx").on(table.token),
+}));
+
+export type UserInvitation = typeof userInvitations.$inferSelect;
+export type InsertUserInvitation = typeof userInvitations.$inferInsert;
+
+/**
+ * Folders table with hierarchical structure
+ */
+export const folders = mysqlTable("folders", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  parentId: int("parentId"), // null for root folders
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  parentIdx: index("parent_idx").on(table.parentId),
+  createdByIdx: index("created_by_idx").on(table.createdBy),
+}));
+
+export type Folder = typeof folders.$inferSelect;
+export type InsertFolder = typeof folders.$inferInsert;
+
+/**
+ * Files table with S3 references and metadata
+ */
+export const files = mysqlTable("files", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(), // S3 key
+  url: text("url").notNull(), // S3 URL
+  mimeType: varchar("mimeType", { length: 127 }),
+  size: int("size").notNull(), // bytes
+  folderId: int("folderId").notNull(),
+  uploadedBy: int("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  folderIdx: index("folder_idx").on(table.folderId),
+  uploadedByIdx: index("uploaded_by_idx").on(table.uploadedBy),
+}));
+
+export type File = typeof files.$inferSelect;
+export type InsertFile = typeof files.$inferInsert;
+
+/**
+ * Folder permissions table for granular access control
+ */
+export const folderPermissions = mysqlTable("folder_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  folderId: int("folderId").notNull(),
+  userId: int("userId").notNull(),
+  canView: boolean("canView").default(true).notNull(),
+  canUpload: boolean("canUpload").default(false).notNull(),
+  canEdit: boolean("canEdit").default(false).notNull(),
+  canDelete: boolean("canDelete").default(false).notNull(),
+  grantedBy: int("grantedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  folderUserIdx: index("folder_user_idx").on(table.folderId, table.userId),
+  userIdx: index("user_idx").on(table.userId),
+}));
+
+export type FolderPermission = typeof folderPermissions.$inferSelect;
+export type InsertFolderPermission = typeof folderPermissions.$inferInsert;
+
+/**
+ * Audit logs table for tracking all actions
+ */
+export const auditLogs = mysqlTable("audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  action: varchar("action", { length: 64 }).notNull(), // e.g., "file_upload", "file_download", "permission_grant"
+  entityType: varchar("entityType", { length: 32 }).notNull(), // e.g., "file", "folder", "user"
+  entityId: int("entityId"), // ID of the affected entity
+  details: text("details"), // JSON string with additional context
+  ipAddress: varchar("ipAddress", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("user_idx").on(table.userId),
+  actionIdx: index("action_idx").on(table.action),
+  entityIdx: index("entity_idx").on(table.entityType, table.entityId),
+  createdAtIdx: index("created_at_idx").on(table.createdAt),
+}));
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;

@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Shield, Lock, FileText, Users } from "lucide-react";
-import { APP_TITLE, getLoginUrl } from "@/const";
+import { APP_TITLE, APP_LOGO, getLoginUrl } from "@/const";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
@@ -41,12 +41,15 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-16 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 mb-6">
-            <Shield className="w-10 h-10 text-primary" />
+          <div className="flex justify-center mb-6">
+            <img src={APP_LOGO} alt="WorldPath Logo" className="h-24 w-24 object-contain" />
           </div>
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            {APP_TITLE}
+            WorldPath Regulatory Solutions
           </h1>
+          <p className="text-2xl text-primary font-serif italic mb-6">
+            Charting the WorldPath to success
+          </p>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Secure file repository and collaboration hub for medical device projects and regulatory affairs
           </p>
@@ -114,8 +117,14 @@ export default function Home() {
 
         {/* Footer */}
         <div className="mt-16 text-center text-sm text-muted-foreground">
-          <p>© 2024 KDx Diagnostics. All rights reserved.</p>
-          <p className="mt-2">Secure • Compliant • Reliable</p>
+          <p>© 2024 WorldPath Regulatory Solutions, LLC. All rights reserved.</p>
+          <p className="mt-2">2108 N Street, Suite N | Sacramento, CA 95816</p>
+          <p className="mt-1">Office: +1.858.264.2019 | Cell: +1.949.800.9978</p>
+          <p className="mt-1">
+            <a href="https://www.worldpathregulatory.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+              www.worldpathregulatory.com
+            </a>
+          </p>
         </div>
       </div>
     </div>

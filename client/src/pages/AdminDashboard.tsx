@@ -60,7 +60,7 @@ export default function AdminDashboard() {
               <HomeIcon className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">{APP_TITLE}</h1>
+              <h1 className="text-xl font-semibold text-foreground">WorldPath Regulatory Solutions</h1>
               <p className="text-xs text-muted-foreground">Admin Portal</p>
             </div>
           </div>

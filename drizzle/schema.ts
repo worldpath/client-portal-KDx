@@ -146,3 +146,27 @@ export const auditLogs = mysqlTable("audit_logs", {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+/**
+ * Share links table for generating shareable file links
+ */
+export const shareLinks = mysqlTable("share_links", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(), // Unique shareable token
+  createdBy: int("createdBy").notNull(), // User who created the share
+  password: varchar("password", { length: 255 }), // Bcrypt hashed password (optional)
+  expiresAt: timestamp("expiresAt"), // Expiration date (optional)
+  maxDownloads: int("maxDownloads"), // Maximum number of downloads (optional)
+  downloadCount: int("downloadCount").default(0).notNull(), // Current download count
+  isActive: boolean("isActive").default(true).notNull(), // Can be revoked
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  lastAccessedAt: timestamp("lastAccessedAt"), // Track last access
+}, (table) => ({
+  fileIdx: index("file_idx").on(table.fileId),
+  tokenIdx: index("token_idx").on(table.token),
+  createdByIdx: index("created_by_idx").on(table.createdBy),
+}));
+
+export type ShareLink = typeof shareLinks.$inferSelect;
+export type InsertShareLink = typeof shareLinks.$inferInsert;

@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import PermissionManager from "@/components/PermissionManager";
 import FilePreview from "@/components/FilePreview";
 import VersionHistory from "@/components/VersionHistory";
+import ShareDialog from "@/components/ShareDialog";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,8 @@ import {
   SortAsc,
   SortDesc,
   Filter,
-  History
+  History,
+  Share
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -44,6 +46,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [selectedFolderForPermissions, setSelectedFolderForPermissions] = useState<{ id: number; name: string } | null>(null);
   const [previewFile, setPreviewFile] = useState<{ id: number; name: string; url: string; mimeType: string | null } | null>(null);
   const [versionHistoryFile, setVersionHistoryFile] = useState<{ id: number; name: string } | null>(null);
+  const [shareDialogFile, setShareDialogFile] = useState<{ id: number; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Sorting and filtering state
@@ -617,6 +620,14 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                       >
                         <History className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShareDialogFile({ id: file.id, name: file.name })}
+                        title="Share File"
+                      >
+                        <Share className="w-4 h-4" />
+                      </Button>
                       {isAdmin && (
                         <Button
                           variant="ghost"
@@ -815,6 +826,16 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
           isOpen={!!versionHistoryFile}
           onClose={() => setVersionHistoryFile(null)}
           canEdit={isAdmin}
+        />
+      )}
+
+      {/* Share Dialog */}
+      {shareDialogFile && (
+        <ShareDialog
+          fileId={shareDialogFile.id}
+          fileName={shareDialogFile.name}
+          open={!!shareDialogFile}
+          onOpenChange={(open) => !open && setShareDialogFile(null)}
         />
       )}
     </div>

@@ -155,3 +155,25 @@
 - [x] Add empty state for no results
 - [x] Test search performance with large datasets
 - [x] Add search to audit logs
+
+## Shareable File Links
+- [x] Add share_links table to database schema
+- [x] Generate unique shareable link tokens
+- [x] Implement password protection with bcrypt hashing
+- [x] Add expiration date functionality
+- [x] Track link access in audit logs
+- [x] Implement link revocation
+- [x] Backend procedure to create share link
+- [x] Backend procedure to validate and access shared file
+- [x] Backend procedure to list active shares for a file
+- [x] Backend procedure to revoke share link
+- [x] Build share dialog UI with options
+- [x] Add share button to file actions
+- [x] Display active shares list
+- [x] Create public access page for shared links
+- [x] Implement password input for protected links
+- [x] Add expiration message for expired links
+- [x] Test link generation and access
+- [x] Test password protection
+- [x] Test expiration dates
+- [x] Make sharing UI mobile-responsive

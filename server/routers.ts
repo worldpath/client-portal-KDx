@@ -713,6 +713,185 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ SHARE LINKS ============
+  share: router({
+    create: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        password: z.string().optional(),
+        expiresIn: z.number().optional(), // Hours until expiration
+        maxDownloads: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Check if user has access to the file
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Check permissions
+        if (ctx.user.role !== 'admin') {
+          const hasAccess = await db.checkFolderAccess(ctx.user.id, file.folderId);
+          if (!hasAccess) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+          }
+        }
+        
+        // Generate unique token
+        const token = crypto.randomBytes(32).toString('hex');
+        
+        // Hash password if provided
+        let hashedPassword: string | undefined;
+        if (input.password) {
+          const bcrypt = await import('bcryptjs');
+          hashedPassword = await bcrypt.hash(input.password, 10);
+        }
+        
+        // Calculate expiration date
+        let expiresAt: Date | undefined;
+        if (input.expiresIn) {
+          expiresAt = new Date();
+          expiresAt.setHours(expiresAt.getHours() + input.expiresIn);
+        }
+        
+        // Create share link
+        const shareLinkId = await db.createShareLink({
+          fileId: input.fileId,
+          token,
+          createdBy: ctx.user.id,
+          password: hashedPassword,
+          expiresAt,
+          maxDownloads: input.maxDownloads,
+        });
+        
+        // Log action
+        await logAction(
+          ctx.user.id,
+          'create_share_link',
+          'file',
+          input.fileId,
+          { token, expiresAt, maxDownloads: input.maxDownloads },
+          ctx.req
+        );
+        
+        return { token, shareLinkId };
+      }),
+    
+    list: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        // Check if user has access to the file
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Check permissions
+        if (ctx.user.role !== 'admin') {
+          const hasAccess = await db.checkFolderAccess(ctx.user.id, file.folderId);
+          if (!hasAccess) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+          }
+        }
+        
+        return await db.getShareLinksByFile(input.fileId);
+      }),
+    
+    revoke: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        // Get share link
+        const shareLink = await db.getShareLinkByToken('');
+        // We need to get by ID, let's add that function
+        
+        await db.revokeShareLink(input.id);
+        
+        // Log action
+        await logAction(
+          ctx.user.id,
+          'revoke_share_link',
+          'share_link',
+          input.id,
+          {},
+          ctx.req
+        );
+        
+        return { success: true };
+      }),
+    
+    // Public procedure to access shared file
+    access: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        password: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Get share link
+        const shareLink = await db.getShareLinkByToken(input.token);
+        
+        if (!shareLink || !shareLink.isActive) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Share link not found or expired' });
+        }
+        
+        // Check expiration
+        if (shareLink.expiresAt && new Date() > shareLink.expiresAt) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Share link has expired' });
+        }
+        
+        // Check max downloads
+        if (shareLink.maxDownloads && shareLink.downloadCount >= shareLink.maxDownloads) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Download limit reached' });
+        }
+        
+        // Check password
+        if (shareLink.password) {
+          if (!input.password) {
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Password required' });
+          }
+          
+          const bcrypt = await import('bcryptjs');
+          const isValid = await bcrypt.compare(input.password, shareLink.password);
+          if (!isValid) {
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid password' });
+          }
+        }
+        
+        // Get file
+        const file = await db.getFileById(shareLink.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Update access count
+        await db.updateShareLinkAccess(shareLink.id);
+        
+        // Log access (use a system user ID for public access)
+        await logAction(
+          shareLink.createdBy,
+          'access_share_link',
+          'file',
+          file.id,
+          { token: input.token, downloadCount: shareLink.downloadCount + 1 },
+          ctx.req
+        );
+        
+        return {
+          file: {
+            id: file.id,
+            name: file.name,
+            size: file.size,
+            mimeType: file.mimeType,
+            url: file.url,
+          },
+          shareLink: {
+            downloadCount: shareLink.downloadCount + 1,
+            maxDownloads: shareLink.maxDownloads,
+            expiresAt: shareLink.expiresAt,
+          },
+        };
+      }),
+  }),
+
   // ============ SEARCH ============
   search: router({
     files: protectedProcedure

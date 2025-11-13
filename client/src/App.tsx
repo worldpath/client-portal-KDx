@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import SearchResults from "./pages/SearchResults";
+import SharedFile from "./pages/SharedFile";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path={"/client"} component={ClientDashboard} />
       <Route path={"/search/:query"} component={SearchResults} />
       <Route path={"/search"} component={SearchResults} />
+      <Route path={"/share/:token"} component={SharedFile} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

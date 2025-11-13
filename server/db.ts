@@ -7,7 +7,8 @@ import {
   files, InsertFile,
   fileVersions, InsertFileVersion,
   folderPermissions, InsertFolderPermission,
-  auditLogs, InsertAuditLog
+  auditLogs, InsertAuditLog,
+  shareLinks, InsertShareLink
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -307,6 +308,22 @@ export async function revokeFolderPermission(id: number) {
   await db.delete(folderPermissions).where(eq(folderPermissions.id, id));
 }
 
+export async function checkFolderAccess(userId: number, folderId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  const permissions = await db.select()
+    .from(folderPermissions)
+    .where(and(
+      eq(folderPermissions.userId, userId),
+      eq(folderPermissions.folderId, folderId),
+      eq(folderPermissions.canView, true)
+    ))
+    .limit(1);
+  
+  return permissions.length > 0;
+}
+
 // ============ AUDIT LOG OPERATIONS ============
 
 export async function createAuditLog(log: InsertAuditLog) {
@@ -484,4 +501,60 @@ export async function getFolderPath(folderId: number): Promise<Array<{ id: numbe
   }
   
   return path;
+}
+
+// ============ SHARE LINK OPERATIONS ============
+
+export async function createShareLink(data: InsertShareLink) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(shareLinks).values(data);
+  return result[0].insertId;
+}
+
+export async function getShareLinkByToken(token: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select()
+    .from(shareLinks)
+    .where(eq(shareLinks.token, token))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getShareLinksByFile(fileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select()
+    .from(shareLinks)
+    .where(and(
+      eq(shareLinks.fileId, fileId),
+      eq(shareLinks.isActive, true)
+    ))
+    .orderBy(desc(shareLinks.createdAt));
+}
+
+export async function updateShareLinkAccess(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(shareLinks)
+    .set({
+      downloadCount: sql`${shareLinks.downloadCount} + 1`,
+      lastAccessedAt: new Date(),
+    })
+    .where(eq(shareLinks.id, id));
+}
+
+export async function revokeShareLink(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(shareLinks)
+    .set({ isActive: false })
+    .where(eq(shareLinks.id, id));
 }

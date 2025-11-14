@@ -1483,6 +1483,126 @@ export const appRouter = router({
         return { success: true };
       }),
     
+    bulkApproveFiles: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const results = { succeeded: [] as number[], failed: [] as number[] };
+        
+        for (const fileId of input.fileIds) {
+          try {
+            const file = await db.getFileById(fileId);
+            if (!file) {
+              results.failed.push(fileId);
+              continue;
+            }
+            
+            await db.approveFileByReviewer(fileId, ctx.user.id, input.notes);
+            
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: 'approve_file',
+              entityType: 'file',
+              entityId: fileId,
+              details: input.notes || 'File approved (bulk action)',
+            });
+            
+            // Send email notification to file owner
+            const fileOwner = await db.getUserById(file.uploadedBy);
+            if (fileOwner && fileOwner.email) {
+              const prefs = await db.getUserPreferences(fileOwner.id);
+              if (prefs.emailStatusChange && prefs.deliveryMode === 'instant') {
+                try {
+                  const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+                  await sendStatusChangeNotification({
+                    recipientEmail: fileOwner.email,
+                    recipientName: fileOwner.name || 'User',
+                    fileName: file.name,
+                    fileId: file.id,
+                    oldStatus: 'under_review',
+                    newStatus: 'approved',
+                    changedBy: ctx.user.name || 'Reviewer',
+                    notes: input.notes,
+                    portalUrl,
+                  });
+                } catch (error) {
+                  console.error(`Failed to send approval notification:`, error);
+                }
+              }
+            }
+            
+            results.succeeded.push(fileId);
+          } catch (error) {
+            console.error(`Failed to approve file ${fileId}:`, error);
+            results.failed.push(fileId);
+          }
+        }
+        
+        return results;
+      }),
+    
+    bulkRejectFiles: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        reason: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const results = { succeeded: [] as number[], failed: [] as number[] };
+        
+        for (const fileId of input.fileIds) {
+          try {
+            const file = await db.getFileById(fileId);
+            if (!file) {
+              results.failed.push(fileId);
+              continue;
+            }
+            
+            await db.rejectFileByReviewer(fileId, ctx.user.id, input.reason);
+            
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: 'reject_file',
+              entityType: 'file',
+              entityId: fileId,
+              details: input.reason,
+            });
+            
+            // Send email notification to file owner
+            const fileOwner = await db.getUserById(file.uploadedBy);
+            if (fileOwner && fileOwner.email) {
+              const prefs = await db.getUserPreferences(fileOwner.id);
+              if (prefs.emailStatusChange && prefs.deliveryMode === 'instant') {
+                try {
+                  const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+                  await sendStatusChangeNotification({
+                    recipientEmail: fileOwner.email,
+                    recipientName: fileOwner.name || 'User',
+                    fileName: file.name,
+                    fileId: file.id,
+                    oldStatus: 'under_review',
+                    newStatus: 'rejected',
+                    changedBy: ctx.user.name || 'Reviewer',
+                    notes: input.reason,
+                    portalUrl,
+                  });
+                } catch (error) {
+                  console.error(`Failed to send rejection notification:`, error);
+                }
+              }
+            }
+            
+            results.succeeded.push(fileId);
+          } catch (error) {
+            console.error(`Failed to reject file ${fileId}:`, error);
+            results.failed.push(fileId);
+          }
+        }
+        
+        return results;
+      }),
+    
     myPendingReviews: protectedProcedure
       .query(async ({ ctx }) => {
         return await db.getPendingReviewsForReviewer(ctx.user.id);

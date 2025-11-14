@@ -329,3 +329,19 @@
 - [x] Integrate widget into AdminDashboard
 - [x] Test quick actions work correctly
 - [x] Test widget updates after actions
+
+## Bulk Approval Actions
+- [x] Create bulkApproveFiles backend procedure
+- [x] Create bulkRejectFiles backend procedure
+- [x] Add tRPC endpoints for bulk actions
+- [x] Add checkbox selection to widget file list
+- [x] Add "Select All" checkbox in widget header
+- [x] Add bulk approve button (disabled when no selection)
+- [x] Add bulk reject button (disabled when no selection)
+- [x] Show selected count in bulk action buttons
+- [x] Add bulk approve confirmation dialog
+- [x] Add bulk reject dialog with shared reason
+- [x] Implement optimistic updates for bulk actions
+- [x] Clear selection after successful bulk action
+- [x] Test bulk approve with multiple files
+- [x] Test bulk reject with multiple files

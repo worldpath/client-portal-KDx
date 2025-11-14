@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Clock, CheckCircle, XCircle, Loader2, User, FileText } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Loader2, User, FileText, CheckSquare, Square } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface PendingFile {
@@ -40,6 +40,13 @@ export default function PendingApprovalsWidget() {
   const [selectedFile, setSelectedFile] = useState<PendingFile | null>(null);
   const [notes, setNotes] = useState("");
   const [reason, setReason] = useState("");
+  
+  // Bulk selection state
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<number>>(new Set());
+  const [bulkApproveDialogOpen, setBulkApproveDialogOpen] = useState(false);
+  const [bulkRejectDialogOpen, setBulkRejectDialogOpen] = useState(false);
+  const [bulkNotes, setBulkNotes] = useState("");
+  const [bulkReason, setBulkReason] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -73,6 +80,50 @@ export default function PendingApprovalsWidget() {
       toast.error(error.message || "Failed to reject file");
     },
   });
+  
+  // Bulk approve mutation
+  const bulkApproveMutation = trpc.workflow.bulkApproveFiles.useMutation({
+    onSuccess: (results) => {
+      const successCount = results.succeeded.length;
+      const failCount = results.failed.length;
+      
+      if (failCount === 0) {
+        toast.success(`${successCount} file(s) approved successfully`);
+      } else {
+        toast.warning(`${successCount} file(s) approved, ${failCount} failed`);
+      }
+      
+      setBulkApproveDialogOpen(false);
+      setBulkNotes("");
+      setSelectedFileIds(new Set());
+      utils.workflow.pendingApprovalsOverview.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to approve files");
+    },
+  });
+  
+  // Bulk reject mutation
+  const bulkRejectMutation = trpc.workflow.bulkRejectFiles.useMutation({
+    onSuccess: (results) => {
+      const successCount = results.succeeded.length;
+      const failCount = results.failed.length;
+      
+      if (failCount === 0) {
+        toast.success(`${successCount} file(s) rejected successfully`);
+      } else {
+        toast.warning(`${successCount} file(s) rejected, ${failCount} failed`);
+      }
+      
+      setBulkRejectDialogOpen(false);
+      setBulkReason("");
+      setSelectedFileIds(new Set());
+      utils.workflow.pendingApprovalsOverview.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to reject files");
+    },
+  });
 
   const handleApprove = (file: PendingFile) => {
     setSelectedFile(file);
@@ -100,6 +151,44 @@ export default function PendingApprovalsWidget() {
     rejectMutation.mutate({
       fileId: selectedFile.id,
       reason: reason.trim(),
+    });
+  };
+  
+  // Bulk selection handlers
+  const toggleFileSelection = (fileId: number) => {
+    const newSelection = new Set(selectedFileIds);
+    if (newSelection.has(fileId)) {
+      newSelection.delete(fileId);
+    } else {
+      newSelection.add(fileId);
+    }
+    setSelectedFileIds(newSelection);
+  };
+  
+  const toggleSelectAll = () => {
+    if (selectedFileIds.size === pendingFiles.length) {
+      setSelectedFileIds(new Set());
+    } else {
+      setSelectedFileIds(new Set(pendingFiles.map(f => f.id)));
+    }
+  };
+  
+  const confirmBulkApprove = () => {
+    if (selectedFileIds.size === 0) return;
+    bulkApproveMutation.mutate({
+      fileIds: Array.from(selectedFileIds),
+      notes: bulkNotes || undefined,
+    });
+  };
+  
+  const confirmBulkReject = () => {
+    if (selectedFileIds.size === 0 || !bulkReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+    bulkRejectMutation.mutate({
+      fileIds: Array.from(selectedFileIds),
+      reason: bulkReason.trim(),
     });
   };
 
@@ -146,7 +235,49 @@ export default function PendingApprovalsWidget() {
                   {pendingFiles.length}
                 </Badge>
               )}
+              {selectedFileIds.size > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {selectedFileIds.size} selected
+                </Badge>
+              )}
             </div>
+            {pendingFiles.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={toggleSelectAll}
+                  className="gap-2"
+                >
+                  {selectedFileIds.size === pendingFiles.length ? (
+                    <CheckSquare className="w-4 h-4" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                  {selectedFileIds.size === pendingFiles.length ? "Deselect All" : "Select All"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setBulkApproveDialogOpen(true)}
+                  disabled={selectedFileIds.size === 0}
+                  className="bg-green-600 hover:bg-green-700 gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Approve ({selectedFileIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setBulkRejectDialogOpen(true)}
+                  disabled={selectedFileIds.size === 0}
+                  className="gap-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Reject ({selectedFileIds.size})
+                </Button>
+              </div>
+            )}
           </div>
           <CardDescription>
             Files awaiting review and approval
@@ -170,6 +301,16 @@ export default function PendingApprovalsWidget() {
                   {/* File Info */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <button
+                        onClick={() => toggleFileSelection(file.id)}
+                        className="mt-0.5 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                      >
+                        {selectedFileIds.has(file.id) ? (
+                          <CheckSquare className="w-5 h-5 text-primary" />
+                        ) : (
+                          <Square className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </button>
                       <FileText className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{file.name}</p>
@@ -331,6 +472,113 @@ export default function PendingApprovalsWidget() {
                 <>
                   <XCircle className="w-4 h-4 mr-2" />
                   Reject
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Approve Dialog */}
+      <Dialog open={bulkApproveDialogOpen} onOpenChange={setBulkApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Approve Files</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve {selectedFileIds.size} file(s)?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-approve-notes">Notes (Optional)</Label>
+              <Textarea
+                id="bulk-approve-notes"
+                placeholder="Add any notes about these approvals..."
+                value={bulkNotes}
+                onChange={(e) => setBulkNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkApproveDialogOpen(false);
+                setBulkNotes("");
+              }}
+              disabled={bulkApproveMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmBulkApprove}
+              disabled={bulkApproveMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {bulkApproveMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve {selectedFileIds.size} File(s)
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Reject Dialog */}
+      <Dialog open={bulkRejectDialogOpen} onOpenChange={setBulkRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Reject Files</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting {selectedFileIds.size} file(s)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-reject-reason">Reason *</Label>
+              <Textarea
+                id="bulk-reject-reason"
+                placeholder="Explain why these files are being rejected..."
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                rows={4}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkRejectDialogOpen(false);
+                setBulkReason("");
+              }}
+              disabled={bulkRejectMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkReject}
+              disabled={bulkRejectMutation.isPending || !bulkReason.trim()}
+            >
+              {bulkRejectMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Rejecting...
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject {selectedFileIds.size} File(s)
                 </>
               )}
             </Button>

@@ -43,12 +43,16 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [showUploadFile, setShowUploadFile] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<number | null>(null);
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedFolderForPermissions, setSelectedFolderForPermissions] = useState<{ id: number; name: string } | null>(null);
   const [previewFile, setPreviewFile] = useState<{ id: number; name: string; url: string; mimeType: string | null; workflowStatus?: string; reviewerId?: number | null; reviewNotes?: string | null; uploadedBy?: number; approvalRequirement?: string } | null>(null);
   const [versionHistoryFile, setVersionHistoryFile] = useState<{ id: number; name: string } | null>(null);
   const [shareDialogFile, setShareDialogFile] = useState<{ id: number; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch workflow templates
+  const { data: workflowTemplates } = trpc.workflows.getTemplates.useQuery();
   
   // Sorting and filtering state
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,9 +172,13 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   // Upload file mutation
   const uploadFileMutation = trpc.files.upload.useMutation({
     onSuccess: () => {
-      toast.success("File uploaded successfully");
+      const message = selectedWorkflowId 
+        ? "File uploaded and workflow assigned successfully"
+        : "File uploaded successfully";
+      toast.success(message);
       setShowUploadFile(false);
       setSelectedFile(null);
+      setSelectedWorkflowId(null);
       utils.files.list.invalidate();
     },
     onError: (error) => {
@@ -300,6 +308,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
         content,
         mimeType: selectedFile.type || 'application/octet-stream',
         size: selectedFile.size,
+        workflowTemplateId: selectedWorkflowId || undefined,
       });
     };
     reader.readAsDataURL(selectedFile as any);
@@ -811,6 +820,27 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
               {selectedFile && (
                 <p className="text-sm text-muted-foreground">
                   Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="workflow">Workflow (Optional)</Label>
+              <select
+                id="workflow"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={selectedWorkflowId || ""}
+                onChange={(e) => setSelectedWorkflowId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">No workflow</option>
+                {workflowTemplates?.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+              {selectedWorkflowId && (
+                <p className="text-sm text-muted-foreground">
+                  This file will be assigned to the selected workflow upon upload
                 </p>
               )}
             </div>

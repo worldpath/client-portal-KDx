@@ -495,3 +495,11 @@
 - [x] Add confirmation dialogs for destructive operations
 - [x] Implement optimistic updates for batch operations
 - [x] Add progress indicators for long-running batch operations
+
+## Workflow Upload Integration
+- [x] Add workflow template selector to upload dialog
+- [x] Fetch active workflow templates in upload component
+- [x] Update file upload backend to accept optional workflowTemplateId
+- [x] Automatically create workflow instance after file upload
+- [x] Show workflow assignment confirmation in upload success message
+- [x] Test workflow assignment during upload

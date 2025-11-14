@@ -217,6 +217,7 @@ export const appRouter = router({
         content: z.string(), // base64 encoded
         mimeType: z.string(),
         size: z.number(),
+        workflowTemplateId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         // Check permission
@@ -277,6 +278,11 @@ export const appRouter = router({
               fileId,
             });
           }
+        }
+
+        // Assign workflow if specified
+        if (input.workflowTemplateId) {
+          await db.assignWorkflowToFile(fileId, input.workflowTemplateId);
         }
 
         return { success: true, fileId, url };

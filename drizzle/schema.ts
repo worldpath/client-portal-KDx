@@ -170,3 +170,43 @@ export const shareLinks = mysqlTable("share_links", {
 
 export type ShareLink = typeof shareLinks.$inferSelect;
 export type InsertShareLink = typeof shareLinks.$inferInsert;
+
+/**
+ * File comments table for collaboration
+ */
+export const fileComments = mysqlTable("file_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(),
+  userId: int("userId").notNull(), // User who created the comment
+  content: text("content").notNull(), // Comment text (supports markdown)
+  parentId: int("parentId"), // For threaded replies
+  isEdited: boolean("isEdited").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  fileIdx: index("file_idx").on(table.fileId),
+  userIdx: index("user_idx").on(table.userId),
+  parentIdx: index("parent_idx").on(table.parentId),
+  createdAtIdx: index("created_at_idx").on(table.createdAt),
+}));
+
+export type FileComment = typeof fileComments.$inferSelect;
+export type InsertFileComment = typeof fileComments.$inferInsert;
+
+/**
+ * Comment mentions table for @mention notifications
+ */
+export const commentMentions = mysqlTable("comment_mentions", {
+  id: int("id").autoincrement().primaryKey(),
+  commentId: int("commentId").notNull(),
+  userId: int("userId").notNull(), // User who was mentioned
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  commentIdx: index("comment_idx").on(table.commentId),
+  userIdx: index("user_idx").on(table.userId),
+  isReadIdx: index("is_read_idx").on(table.isRead),
+}));
+
+export type CommentMention = typeof commentMentions.$inferSelect;
+export type InsertCommentMention = typeof commentMentions.$inferInsert;

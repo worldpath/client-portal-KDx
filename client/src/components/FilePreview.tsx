@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Edit, Save, X } from "lucide-react";
+import { Loader2, Edit, Save, X, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import FileComments from "@/components/FileComments";
 
 interface FilePreviewProps {
   fileId: number;
@@ -118,7 +120,16 @@ export default function FilePreview({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto">
+        <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="comments">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Comments
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="preview" className="flex-1 overflow-auto mt-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -153,17 +164,16 @@ export default function FilePreview({
               </pre>
             )
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <p className="text-sm mb-4">Preview not available for this file type</p>
-              <Button
-                variant="outline"
-                onClick={() => window.open(fileUrl, '_blank')}
-              >
-                Download to View
-              </Button>
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Preview not available for this file type
             </div>
           )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="comments" className="flex-1 overflow-auto mt-4">
+            <FileComments fileId={fileId} fileName={fileName} />
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter>
           {isEditing ? (

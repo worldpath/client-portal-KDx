@@ -956,6 +956,130 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ FILE COMMENTS ============
+  comments: router({
+    create: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        content: z.string().min(1),
+        parentId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if user has access to the file
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        const hasAccess = await db.checkFolderAccess(ctx.user.id, file.folderId);
+        if (!hasAccess) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'No access to this file' });
+        }
+        
+        // Create comment
+        const commentId = await db.createComment({
+          fileId: input.fileId,
+          userId: ctx.user.id,
+          content: input.content,
+          parentId: input.parentId,
+        });
+        
+        // Parse and create mentions
+        const mentionedNames = db.parseMentions(input.content);
+        if (mentionedNames.length > 0) {
+          const mentionedUsers = await db.getUsersByNames(mentionedNames);
+          for (const user of mentionedUsers) {
+            if (user.id !== ctx.user.id) {
+              await db.createMention(commentId, user.id);
+            }
+          }
+        }
+        
+        // Log activity
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'create_comment',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Commented on file`,
+        });
+        
+        return { commentId };
+      }),
+    
+    list: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // Check if user has access to the file
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        const hasAccess = await db.checkFolderAccess(ctx.user.id, file.folderId);
+        if (!hasAccess) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'No access to this file' });
+        }
+        
+        return await db.getFileComments(input.fileId);
+      }),
+    
+    update: protectedProcedure
+      .input(z.object({
+        commentId: z.number(),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const comment = await db.getCommentById(input.commentId);
+        if (!comment) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
+        }
+        
+        if (comment.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Can only edit your own comments' });
+        }
+        
+        await db.updateComment(input.commentId, input.content);
+        
+        return { success: true };
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const comment = await db.getCommentById(input.commentId);
+        if (!comment) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
+        }
+        
+        if (comment.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Can only delete your own comments' });
+        }
+        
+        await db.deleteComment(input.commentId);
+        
+        return { success: true };
+      }),
+    
+    mentions: protectedProcedure
+      .input(z.object({ unreadOnly: z.boolean().default(false) }))
+      .query(async ({ ctx, input }) => {
+        return await db.getUserMentions(ctx.user.id, input.unreadOnly);
+      }),
+    
+    markMentionRead: protectedProcedure
+      .input(z.object({ mentionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.markMentionAsRead(input.mentionId);
+        return { success: true };
+      }),
+    
+    unreadCount: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUnreadMentionCount(ctx.user.id);
+      }),
+  }),
+
   // ============ AUDIT LOGS ============
   audit: router({
     list: adminProcedure

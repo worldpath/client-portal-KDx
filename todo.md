@@ -195,3 +195,25 @@
 - [x] Frontend: Make dashboard mobile-responsive
 - [x] Test dashboard with different user roles
 - [x] Test dashboard with various data volumes
+
+## File Comments & Collaboration
+- [x] Add file_comments table to database schema
+- [x] Add comment_mentions table for @mentions
+- [x] Backend: Create comment on file
+- [x] Backend: Get comments for file
+- [x] Backend: Update/edit comment
+- [x] Backend: Delete comment
+- [x] Backend: Parse @mentions from comment text
+- [x] Backend: Create mention records
+- [x] Backend: Get mentions for user (notifications)
+- [x] Frontend: Comment input with @mention autocomplete
+- [x] Frontend: Display comment thread with replies
+- [ ] Frontend: Show comment count badge on files
+- [x] Frontend: Edit/delete own comments
+- [x] Frontend: Real-time comment updates
+- [x] Frontend: Highlight @mentions in comments
+- [ ] Frontend: Show unread comment indicators
+- [x] Frontend: Mobile-responsive comment UI
+- [x] Add comment activity to audit logs
+- [x] Test commenting with multiple users
+- [x] Test @mention notifications

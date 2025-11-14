@@ -8,7 +8,9 @@ import {
   fileVersions, InsertFileVersion,
   folderPermissions, InsertFolderPermission,
   auditLogs, InsertAuditLog,
-  shareLinks, InsertShareLink
+  shareLinks, InsertShareLink,
+  fileComments,
+  commentMentions
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -709,4 +711,166 @@ export async function getUserRecentFiles(userId: number, limit: number = 10) {
     .where(inArray(files.folderId, folderIds))
     .orderBy(desc(files.createdAt))
     .limit(limit);
+}
+
+// ============ FILE COMMENTS ============
+
+export async function createComment(data: {
+  fileId: number;
+  userId: number;
+  content: string;
+  parentId?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(fileComments).values(data);
+  return result[0].insertId;
+}
+
+export async function getFileComments(fileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const comments = await db.select({
+    id: fileComments.id,
+    fileId: fileComments.fileId,
+    userId: fileComments.userId,
+    userName: users.name,
+    userEmail: users.email,
+    content: fileComments.content,
+    parentId: fileComments.parentId,
+    isEdited: fileComments.isEdited,
+    createdAt: fileComments.createdAt,
+    updatedAt: fileComments.updatedAt,
+  })
+    .from(fileComments)
+    .innerJoin(users, eq(fileComments.userId, users.id))
+    .where(eq(fileComments.fileId, fileId))
+    .orderBy(fileComments.createdAt);
+  
+  return comments;
+}
+
+export async function updateComment(commentId: number, content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(fileComments)
+    .set({ content, isEdited: true })
+    .where(eq(fileComments.id, commentId));
+}
+
+export async function deleteComment(commentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete mentions first
+  await db.delete(commentMentions)
+    .where(eq(commentMentions.commentId, commentId));
+  
+  // Delete comment
+  await db.delete(fileComments)
+    .where(eq(fileComments.id, commentId));
+}
+
+export async function getCommentById(commentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select()
+    .from(fileComments)
+    .where(eq(fileComments.id, commentId))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+// ============ COMMENT MENTIONS ============
+
+export async function createMention(commentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.insert(commentMentions).values({
+    commentId,
+    userId,
+  });
+}
+
+export async function getUserMentions(userId: number, unreadOnly: boolean = false) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const conditions = [eq(commentMentions.userId, userId)];
+  if (unreadOnly) {
+    conditions.push(eq(commentMentions.isRead, false));
+  }
+  
+  const mentions = await db.select({
+    id: commentMentions.id,
+    commentId: commentMentions.commentId,
+    isRead: commentMentions.isRead,
+    createdAt: commentMentions.createdAt,
+    comment: {
+      id: fileComments.id,
+      content: fileComments.content,
+      fileId: fileComments.fileId,
+      userId: fileComments.userId,
+      userName: users.name,
+      createdAt: fileComments.createdAt,
+    },
+  })
+    .from(commentMentions)
+    .innerJoin(fileComments, eq(commentMentions.commentId, fileComments.id))
+    .innerJoin(users, eq(fileComments.userId, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(commentMentions.createdAt));
+  
+  return mentions;
+}
+
+export async function markMentionAsRead(mentionId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(commentMentions)
+    .set({ isRead: true })
+    .where(eq(commentMentions.id, mentionId));
+}
+
+export async function getUnreadMentionCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  const result = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(commentMentions)
+    .where(and(
+      eq(commentMentions.userId, userId),
+      eq(commentMentions.isRead, false)
+    ));
+  
+  return result[0]?.count || 0;
+}
+
+// Parse @mentions from comment text
+export function parseMentions(text: string): string[] {
+  const mentionRegex = /@(\w+)/g;
+  const mentions: string[] = [];
+  let match;
+  
+  while ((match = mentionRegex.exec(text)) !== null) {
+    mentions.push(match[1]);
+  }
+  
+  return mentions;
+}
+
+export async function getUsersByNames(names: string[]) {
+  const db = await getDb();
+  if (!db || names.length === 0) return [];
+  
+  return await db.select()
+    .from(users)
+    .where(sql`${users.name} IN (${sql.join(names.map(n => sql`${n}`), sql`, `)})`);
 }

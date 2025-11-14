@@ -217,3 +217,25 @@
 - [x] Add comment activity to audit logs
 - [x] Test commenting with multiple users
 - [x] Test @mention notifications
+
+## Approval Workflow System
+- [x] Add workflow_status enum to files table (draft, under_review, approved, rejected)
+- [ ] Add file_approvals table for tracking approval requests
+- [x] Add reviewerId and reviewedAt fields to files
+- [x] Backend: Submit file for review
+- [x] Backend: Assign reviewer to file
+- [x] Backend: Approve file
+- [x] Backend: Reject file with reason
+- [x] Backend: Get files by workflow status
+- [x] Backend: Get pending approvals for reviewer
+- [x] Backend: Track workflow history in audit logs
+- [x] Frontend: Status badge component
+- [x] Frontend: Submit for review dialog
+- [x] Frontend: Approve/reject dialog for reviewers
+- [ ] Frontend: Workflow status filter
+- [ ] Frontend: Pending approvals widget
+- [ ] Frontend: Workflow history timeline
+- [ ] Frontend: Bulk status update
+- [ ] Add workflow notifications (email alerts)
+- [x] Test workflow transitions
+- [x] Test reviewer permissions

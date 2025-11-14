@@ -4,18 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Edit, Save, X, MessageSquare } from "lucide-react";
+import { Loader2, Edit, Save, X, MessageSquare, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 import FileComments from "@/components/FileComments";
+import { WorkflowManager } from "@/components/WorkflowManager";
 
 interface FilePreviewProps {
   fileId: number;
   fileName: string;
   fileUrl: string;
   mimeType: string | null;
+  workflowStatus?: string;
+  reviewerId?: number | null;
+  reviewNotes?: string | null;
+  uploadedBy?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isAdmin: boolean;
+  onWorkflowChange?: () => void;
 }
 
 export default function FilePreview({
@@ -23,9 +29,14 @@ export default function FilePreview({
   fileName,
   fileUrl,
   mimeType,
+  workflowStatus,
+  reviewerId,
+  reviewNotes,
+  uploadedBy,
   open,
   onOpenChange,
   isAdmin,
+  onWorkflowChange,
 }: FilePreviewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -121,11 +132,15 @@ export default function FilePreview({
         </DialogHeader>
 
         <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="w-4 h-4 mr-2" />
               Comments
+            </TabsTrigger>
+            <TabsTrigger value="workflow">
+              <GitBranch className="w-4 h-4 mr-2" />
+              Workflow
             </TabsTrigger>
           </TabsList>
 
@@ -172,6 +187,20 @@ export default function FilePreview({
 
           <TabsContent value="comments" className="flex-1 overflow-auto mt-4">
             <FileComments fileId={fileId} fileName={fileName} />
+          </TabsContent>
+
+          <TabsContent value="workflow" className="flex-1 overflow-auto mt-4">
+            {workflowStatus && uploadedBy !== undefined && (
+              <WorkflowManager
+                fileId={fileId}
+                fileName={fileName}
+                currentStatus={workflowStatus}
+                reviewerId={reviewerId}
+                reviewNotes={reviewNotes}
+                uploadedBy={uploadedBy}
+                onStatusChange={onWorkflowChange}
+              />
+            )}
           </TabsContent>
         </Tabs>
 

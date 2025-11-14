@@ -44,7 +44,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedFolderForPermissions, setSelectedFolderForPermissions] = useState<{ id: number; name: string } | null>(null);
-  const [previewFile, setPreviewFile] = useState<{ id: number; name: string; url: string; mimeType: string | null } | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ id: number; name: string; url: string; mimeType: string | null; workflowStatus?: string; reviewerId?: number | null; reviewNotes?: string | null; uploadedBy?: number } | null>(null);
   const [versionHistoryFile, setVersionHistoryFile] = useState<{ id: number; name: string } | null>(null);
   const [shareDialogFile, setShareDialogFile] = useState<{ id: number; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -601,7 +601,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setPreviewFile({ id: file.id, name: file.name, url: file.url, mimeType: file.mimeType })}
+                        onClick={() => setPreviewFile({ id: file.id, name: file.name, url: file.url, mimeType: file.mimeType, workflowStatus: file.workflowStatus, reviewerId: file.reviewerId, reviewNotes: file.reviewNotes, uploadedBy: file.uploadedBy })}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -812,9 +812,17 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
           fileName={previewFile.name}
           fileUrl={previewFile.url}
           mimeType={previewFile.mimeType}
+          workflowStatus={previewFile.workflowStatus}
+          reviewerId={previewFile.reviewerId}
+          reviewNotes={previewFile.reviewNotes}
+          uploadedBy={previewFile.uploadedBy}
           open={!!previewFile}
           onOpenChange={(open) => !open && setPreviewFile(null)}
           isAdmin={isAdmin}
+          onWorkflowChange={() => {
+            utils.files.list.invalidate();
+            setPreviewFile(null);
+          }}
         />
       )}
 

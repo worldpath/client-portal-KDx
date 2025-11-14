@@ -874,3 +874,139 @@ export async function getUsersByNames(names: string[]) {
     .from(users)
     .where(sql`${users.name} IN (${sql.join(names.map(n => sql`${n}`), sql`, `)})`);
 }
+
+// ============ WORKFLOW MANAGEMENT ============
+
+export async function submitFileForReview(fileId: number, reviewerId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(files)
+    .set({ 
+      workflowStatus: "under_review",
+      reviewerId: reviewerId || null,
+      reviewedAt: null,
+      reviewNotes: null,
+    })
+    .where(eq(files.id, fileId));
+}
+
+export async function approveFile(fileId: number, reviewerId: number, notes?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(files)
+    .set({ 
+      workflowStatus: "approved",
+      reviewerId,
+      reviewedAt: new Date(),
+      reviewNotes: notes || null,
+    })
+    .where(eq(files.id, fileId));
+}
+
+export async function rejectFile(fileId: number, reviewerId: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(files)
+    .set({ 
+      workflowStatus: "rejected",
+      reviewerId,
+      reviewedAt: new Date(),
+      reviewNotes: reason,
+    })
+    .where(eq(files.id, fileId));
+}
+
+export async function resetFileToDraft(fileId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(files)
+    .set({ 
+      workflowStatus: "draft",
+      reviewerId: null,
+      reviewedAt: null,
+      reviewNotes: null,
+    })
+    .where(eq(files.id, fileId));
+}
+
+export async function getFilesByStatus(folderId: number, status: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select()
+    .from(files)
+    .where(and(
+      eq(files.folderId, folderId),
+      sql`${files.workflowStatus} = ${status}`
+    ))
+    .orderBy(desc(files.updatedAt));
+}
+
+export async function getPendingReviews(reviewerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select({
+    id: files.id,
+    name: files.name,
+    size: files.size,
+    folderId: files.folderId,
+    folderName: folders.name,
+    uploadedBy: files.uploadedBy,
+    uploaderName: users.name,
+    workflowStatus: files.workflowStatus,
+    createdAt: files.createdAt,
+    updatedAt: files.updatedAt,
+  })
+    .from(files)
+    .innerJoin(folders, eq(files.folderId, folders.id))
+    .innerJoin(users, eq(files.uploadedBy, users.id))
+    .where(and(
+      eq(files.reviewerId, reviewerId),
+      sql`${files.workflowStatus} = 'under_review'`
+    ))
+    .orderBy(desc(files.updatedAt));
+}
+
+export async function getMySubmittedFiles(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select()
+    .from(files)
+    .where(and(
+      eq(files.uploadedBy, userId),
+      sql`${files.workflowStatus} IN ('under_review', 'approved', 'rejected')`
+    ))
+    .orderBy(desc(files.updatedAt));
+}
+
+export async function bulkUpdateWorkflowStatus(fileIds: number[], status: string, reviewerId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const updateData: any = { workflowStatus: status };
+  
+  if (status === "under_review") {
+    updateData.reviewerId = reviewerId || null;
+    updateData.reviewedAt = null;
+    updateData.reviewNotes = null;
+  } else if (status === "approved" || status === "rejected") {
+    if (reviewerId) {
+      updateData.reviewerId = reviewerId;
+      updateData.reviewedAt = new Date();
+    }
+  } else if (status === "draft") {
+    updateData.reviewerId = null;
+    updateData.reviewedAt = null;
+    updateData.reviewNotes = null;
+  }
+  
+  await db.update(files)
+    .set(updateData)
+    .where(inArray(files.id, fileIds));
+}

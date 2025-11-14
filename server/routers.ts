@@ -1080,6 +1080,158 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ WORKFLOW MANAGEMENT ============
+  workflow: router({
+    submitForReview: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        reviewerId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Check if user has permission
+        const hasAccess = await db.checkFolderAccess(ctx.user.id, file.folderId);
+        if (!hasAccess && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'No access to this file' });
+        }
+        
+        await db.submitFileForReview(input.fileId, input.reviewerId);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'submit_for_review',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Submitted file for review`,
+        });
+        
+        return { success: true };
+      }),
+    
+    approve: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Only assigned reviewer or admin can approve
+        if (file.reviewerId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only assigned reviewer can approve' });
+        }
+        
+        await db.approveFile(input.fileId, ctx.user.id, input.notes);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'approve_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Approved file${input.notes ? ': ' + input.notes : ''}`,
+        });
+        
+        return { success: true };
+      }),
+    
+    reject: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        reason: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Only assigned reviewer or admin can reject
+        if (file.reviewerId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only assigned reviewer can reject' });
+        }
+        
+        await db.rejectFile(input.fileId, ctx.user.id, input.reason);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'reject_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Rejected file: ${input.reason}`,
+        });
+        
+        return { success: true };
+      }),
+    
+    resetToDraft: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Only file owner or admin can reset
+        if (file.uploadedBy !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only file owner can reset to draft' });
+        }
+        
+        await db.resetFileToDraft(input.fileId);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'reset_to_draft',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Reset file to draft`,
+        });
+        
+        return { success: true };
+      }),
+    
+    pendingReviews: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getPendingReviews(ctx.user.id);
+      }),
+    
+    mySubmissions: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getMySubmittedFiles(ctx.user.id);
+      }),
+    
+    bulkUpdateStatus: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        status: z.enum(["draft", "under_review", "approved", "rejected"]),
+        reviewerId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admin can bulk update
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can bulk update status' });
+        }
+        
+        await db.bulkUpdateWorkflowStatus(input.fileIds, input.status, input.reviewerId);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'bulk_update_status',
+          entityType: 'file',
+          entityId: 0,
+          details: `Bulk updated ${input.fileIds.length} files to ${input.status}`,
+        });
+        
+        return { success: true };
+      }),
+  }),
+
   // ============ AUDIT LOGS ============
   audit: router({
     list: adminProcedure

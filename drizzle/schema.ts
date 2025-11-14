@@ -70,6 +70,10 @@ export const files = mysqlTable("files", {
   folderId: int("folderId").notNull(),
   uploadedBy: int("uploadedBy").notNull(),
   currentVersion: int("currentVersion").default(1).notNull(), // Current version number
+  workflowStatus: mysqlEnum("workflowStatus", ["draft", "under_review", "approved", "rejected"]).default("draft").notNull(),
+  reviewerId: int("reviewerId"), // User assigned to review
+  reviewedAt: timestamp("reviewedAt"), // When approved/rejected
+  reviewNotes: text("reviewNotes"), // Approval/rejection notes
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

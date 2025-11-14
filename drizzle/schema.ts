@@ -342,6 +342,10 @@ export const fileWorkflowStageProgress = mysqlTable("file_workflow_stage_progres
   rejectionReason: text("rejectionReason"),
   startedAt: timestamp("startedAt"),
   completedAt: timestamp("completedAt"),
+  actionTimestamp: timestamp("actionTimestamp"), // When approval/rejection happened
+  actionUserId: int("actionUserId"), // Who performed the action
+  undoneAt: timestamp("undoneAt"), // When action was undone
+  undoneBy: int("undoneBy"), // Who undid the action
 });
 
 export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;

@@ -1913,7 +1913,7 @@ export async function assignWorkflowToFile(fileId: number, workflowTemplateId: n
   return instanceId;
 }
 
-export async function getFileWorkflowProgress(fileId: number) {
+export async function getFileWorkflowProgress(fileId: number, userId?: number) {
   const db = await getDb();
   if (!db) return null;
 
@@ -1936,10 +1936,22 @@ export async function getFileWorkflowProgress(fileId: number) {
     .from(workflowStages)
     .where(inArray(workflowStages.id, stageIds));
 
-  const progressWithStages = progress.map((p) => ({
-    ...p,
-    stage: stagesData.find((s) => s.id === p.stageId),
-  }));
+  const progressWithStages = progress.map((p) => {
+    // Check if user can undo this action
+    let canUndo = false;
+    if (userId && p.actionTimestamp && !p.undoneAt && p.actionUserId === userId) {
+      const now = new Date();
+      const actionTime = new Date(p.actionTimestamp);
+      const minutesSinceAction = (now.getTime() - actionTime.getTime()) / (1000 * 60);
+      canUndo = minutesSinceAction <= 5 && (p.status === 'approved' || p.status === 'rejected');
+    }
+
+    return {
+      ...p,
+      stage: stagesData.find((s) => s.id === p.stageId),
+      canUndo,
+    };
+  });
 
   return {
     instance: instance[0],
@@ -1986,12 +1998,15 @@ export async function approveWorkflowStage(
   const isStageComplete = approvedBy.length >= requiredApprovals;
 
   // Update progress
+  const now = new Date();
   await db
     .update(fileWorkflowStageProgress)
     .set({
       approvedBy: JSON.stringify(approvedBy),
       status: isStageComplete ? "approved" : "in_progress",
-      completedAt: isStageComplete ? new Date() : null,
+      completedAt: isStageComplete ? now : null,
+      actionTimestamp: now,
+      actionUserId: reviewerId,
     })
     .where(eq(fileWorkflowStageProgress.id, currentProgress.id));
 
@@ -2013,13 +2028,16 @@ export async function rejectWorkflowStage(
   if (!db) return null;
 
   // Update progress
+  const now = new Date();
   await db
     .update(fileWorkflowStageProgress)
     .set({
       status: "rejected",
       rejectedBy: reviewerId,
       rejectionReason: reason,
-      completedAt: new Date(),
+      completedAt: now,
+      actionTimestamp: now,
+      actionUserId: reviewerId,
     })
     .where(
       and(

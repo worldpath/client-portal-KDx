@@ -2121,8 +2121,8 @@ export const appRouter = router({
 
     getFileProgress: protectedProcedure
       .input(z.object({ fileId: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getFileWorkflowProgress(input.fileId);
+      .query(async ({ input, ctx }) => {
+        return await db.getFileWorkflowProgress(input.fileId, ctx.user.id);
       }),
 
     approveStage: protectedProcedure
@@ -2150,6 +2150,34 @@ export const appRouter = router({
           input.stageId,
           ctx.user.id,
           input.reason
+        );
+      }),
+
+    canUndoAction: protectedProcedure
+      .input(z.object({
+        workflowInstanceId: z.number(),
+        stageId: z.number(),
+      }))
+      .query(async ({ input, ctx }) => {
+        const { canUndoWorkflowAction } = await import('./db_undo');
+        return await canUndoWorkflowAction(
+          input.workflowInstanceId,
+          input.stageId,
+          ctx.user.id
+        );
+      }),
+
+    undoAction: protectedProcedure
+      .input(z.object({
+        workflowInstanceId: z.number(),
+        stageId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { undoWorkflowStageAction } = await import('./db_undo');
+        return await undoWorkflowStageAction(
+          input.workflowInstanceId,
+          input.stageId,
+          ctx.user.id
         );
       }),
   }),

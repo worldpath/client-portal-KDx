@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Circle, Clock, XCircle, Loader2, User } from "lucide-react";
+import { CheckCircle2, Circle, Clock, XCircle, Loader2, User, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,7 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<number | null>(null);
+  const [undoTimers, setUndoTimers] = useState<Record<number, number>>({});
 
   const utils = trpc.useUtils();
 
@@ -47,6 +48,38 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
       toast.error(error.message || "Failed to reject stage");
     },
   });
+
+  // Undo action mutation
+  const undoAction = trpc.workflows.undoAction.useMutation({
+    onSuccess: () => {
+      toast.success("Action undone successfully");
+      utils.workflows.getFileProgress.invalidate({ fileId });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to undo action");
+    },
+  });
+
+  // Update countdown timers
+  useEffect(() => {
+    if (!workflowProgress) return;
+
+    const interval = setInterval(() => {
+      const newTimers: Record<number, number> = {};
+      workflowProgress.progress.forEach((progressItem: any) => {
+        if (progressItem.actionTimestamp && !progressItem.undoneAt) {
+          const actionTime = new Date(progressItem.actionTimestamp).getTime();
+          const now = Date.now();
+          const elapsed = (now - actionTime) / 1000; // seconds
+          const remaining = Math.max(0, 300 - elapsed); // 5 minutes = 300 seconds
+          newTimers[progressItem.stageId] = Math.floor(remaining);
+        }
+      });
+      setUndoTimers(newTimers);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [workflowProgress]);
 
   const handleApprove = (workflowInstanceId: number, stageId: number) => {
     approveStage.mutate({ workflowInstanceId, stageId });
@@ -167,27 +200,49 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
                             {stage.requiredApprovals > 1 && ` (${stage.requiredApprovals} approvals required)`}
                           </p>
                         </div>
-                        {isCurrentStage && progressItem.canApprove && (
-                          <div className="flex gap-2">
+                        <div className="flex gap-2">
+                          {isCurrentStage && progressItem.canApprove && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleApprove(workflowProgress.instance.id, progressItem.stageId)}
+                                disabled={approveStage.isPending}
+                              >
+                                {approveStage.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleRejectClick(progressItem.stageId)}
+                                disabled={rejectStage.isPending}
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {/* Undo button for recent actions */}
+                          {(isCompleted || isRejected) && progressItem.canUndo && undoTimers[progressItem.stageId] > 0 && (
                             <Button
                               size="sm"
-                              variant="default"
-                              onClick={() => handleApprove(workflowProgress.instance.id, progressItem.stageId)}
-                              disabled={approveStage.isPending}
+                              variant="outline"
+                              onClick={() => undoAction.mutate({ 
+                                workflowInstanceId: workflowProgress.instance.id, 
+                                stageId: progressItem.stageId 
+                              })}
+                              disabled={undoAction.isPending}
+                              className="gap-2"
                             >
-                              {approveStage.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                              Approve
+                              {undoAction.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Undo2 className="w-4 h-4" />
+                              )}
+                              Undo ({Math.floor(undoTimers[progressItem.stageId] / 60)}:{String(undoTimers[progressItem.stageId] % 60).padStart(2, '0')})
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleRejectClick(progressItem.stageId)}
-                              disabled={rejectStage.isPending}
-                            >
-                              Reject
-                            </Button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       {/* Assigned reviewers */}

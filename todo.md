@@ -531,3 +531,22 @@
 - [x] Test template CRUD operations
 - [x] Test stage management
 - [x] Test complete workflow lifecycle with sample templates
+
+## Workflow Undo Feature
+- [x] Add actionTimestamp field to file_workflow_stage_progress table
+- [x] Add actionUserId field to track who performed the action
+- [x] Add undoneAt field to track if action was undone
+- [x] Add undoneBy field to track who undid the action
+- [x] Create database migration for new fields
+- [x] Build canUndoWorkflowAction backend procedure (check 5-minute window)
+- [x] Build undoWorkflowStageAction backend procedure
+- [x] Add undo tRPC endpoints
+- [x] Add undo button to FileWorkflowTimeline component
+- [x] Show countdown timer for undo window
+- [x] Disable undo button after 5 minutes
+- [x] Add undo confirmation dialog (inline action)
+- [x] Send email notification when action is undone (logged for now)
+- [x] Add audit log entry for undo actions
+- [x] Test undo for approvals
+- [x] Test undo for rejections
+- [x] Test 5-minute window enforcement

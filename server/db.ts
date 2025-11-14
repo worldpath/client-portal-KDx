@@ -558,3 +558,155 @@ export async function revokeShareLink(id: number) {
     .set({ isActive: false })
     .where(eq(shareLinks.id, id));
 }
+
+// ============ ANALYTICS & STATISTICS ============
+
+export async function getUserStorageUsage(userId: number) {
+  const db = await getDb();
+  if (!db) return { totalSize: 0, fileCount: 0 };
+  
+  // Get all folders accessible to user
+  const permissions = await db.select()
+    .from(folderPermissions)
+    .where(and(
+      eq(folderPermissions.userId, userId),
+      eq(folderPermissions.canView, true)
+    ));
+  
+  if (permissions.length === 0) {
+    return { totalSize: 0, fileCount: 0 };
+  }
+  
+  const folderIds = permissions.map(p => p.folderId);
+  
+  // Get total size and count of files in accessible folders
+  const result = await db.select({
+    totalSize: sql<number>`COALESCE(SUM(${files.size}), 0)`,
+    fileCount: sql<number>`COUNT(${files.id})`,
+  })
+    .from(files)
+    .where(inArray(files.folderId, folderIds));
+  
+  return result[0] || { totalSize: 0, fileCount: 0 };
+}
+
+export async function getUserStorageByFolder(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get all folders accessible to user
+  const permissions = await db.select()
+    .from(folderPermissions)
+    .where(and(
+      eq(folderPermissions.userId, userId),
+      eq(folderPermissions.canView, true)
+    ));
+  
+  if (permissions.length === 0) return [];
+  
+  const folderIds = permissions.map(p => p.folderId);
+  
+  // Get storage usage per folder
+  const result = await db.select({
+    folderId: files.folderId,
+    folderName: folders.name,
+    totalSize: sql<number>`SUM(${files.size})`,
+    fileCount: sql<number>`COUNT(${files.id})`,
+  })
+    .from(files)
+    .innerJoin(folders, eq(files.folderId, folders.id))
+    .where(inArray(files.folderId, folderIds))
+    .groupBy(files.folderId, folders.name);
+  
+  return result;
+}
+
+export async function getUserRecentActivity(userId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get recent audit logs for the user
+  return await db.select()
+    .from(auditLogs)
+    .where(eq(auditLogs.userId, userId))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(limit);
+}
+
+export async function getUserQuickStats(userId: number) {
+  const db = await getDb();
+  if (!db) return {
+    totalFiles: 0,
+    totalFolders: 0,
+    totalShares: 0,
+    recentDownloads: 0,
+  };
+  
+  // Get accessible folders
+  const permissions = await db.select()
+    .from(folderPermissions)
+    .where(and(
+      eq(folderPermissions.userId, userId),
+      eq(folderPermissions.canView, true)
+    ));
+  
+  const folderIds = permissions.map(p => p.folderId);
+  
+  // Count files
+  const fileCount = folderIds.length > 0
+    ? await db.select({ count: sql<number>`COUNT(*)` })
+        .from(files)
+        .where(inArray(files.folderId, folderIds))
+    : [{ count: 0 }];
+  
+  // Count shares created by user
+  const shareCount = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(shareLinks)
+    .where(and(
+      eq(shareLinks.createdBy, userId),
+      eq(shareLinks.isActive, true)
+    ));
+  
+  // Count recent downloads (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const downloadCount = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(auditLogs)
+    .where(and(
+      eq(auditLogs.userId, userId),
+      eq(auditLogs.action, 'download_file'),
+      sql`${auditLogs.createdAt} >= ${sevenDaysAgo}`
+    ));
+  
+  return {
+    totalFiles: fileCount[0]?.count || 0,
+    totalFolders: folderIds.length,
+    totalShares: shareCount[0]?.count || 0,
+    recentDownloads: downloadCount[0]?.count || 0,
+  };
+}
+
+export async function getUserRecentFiles(userId: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get accessible folders
+  const permissions = await db.select()
+    .from(folderPermissions)
+    .where(and(
+      eq(folderPermissions.userId, userId),
+      eq(folderPermissions.canView, true)
+    ));
+  
+  if (permissions.length === 0) return [];
+  
+  const folderIds = permissions.map(p => p.folderId);
+  
+  // Get recent files from accessible folders
+  return await db.select()
+    .from(files)
+    .where(inArray(files.folderId, folderIds))
+    .orderBy(desc(files.createdAt))
+    .limit(limit);
+}

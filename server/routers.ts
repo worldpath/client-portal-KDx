@@ -926,6 +926,36 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ ANALYTICS ============
+  analytics: router({
+    storageUsage: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserStorageUsage(ctx.user.id);
+      }),
+    
+    storageByFolder: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserStorageByFolder(ctx.user.id);
+      }),
+    
+    recentActivity: protectedProcedure
+      .input(z.object({ limit: z.number().default(20) }))
+      .query(async ({ ctx, input }) => {
+        return await db.getUserRecentActivity(ctx.user.id, input.limit);
+      }),
+    
+    quickStats: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserQuickStats(ctx.user.id);
+      }),
+    
+    recentFiles: protectedProcedure
+      .input(z.object({ limit: z.number().default(10) }))
+      .query(async ({ ctx, input }) => {
+        return await db.getUserRecentFiles(ctx.user.id, input.limit);
+      }),
+  }),
+
   // ============ AUDIT LOGS ============
   audit: router({
     list: adminProcedure

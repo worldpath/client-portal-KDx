@@ -177,3 +177,21 @@
 - [x] Test password protection
 - [x] Test expiration dates
 - [x] Make sharing UI mobile-responsive
+
+## Client Dashboard Analytics
+- [x] Backend: Calculate storage usage by user
+- [x] Backend: Get recent file activity for user
+- [ ] Backend: Get pending items (files needing review/action)
+- [x] Backend: Get storage breakdown by folder
+- [x] Backend: Get quick stats (total files, folders, shares)
+- [x] Backend: Get recent downloads for user
+- [x] Frontend: Create storage usage visualization (pie chart/progress bar)
+- [x] Frontend: Create recent activity timeline
+- [ ] Frontend: Create pending items widget
+- [x] Frontend: Create quick stats cards
+- [x] Frontend: Create storage breakdown chart
+- [ ] Frontend: Create recent shares widget
+- [ ] Frontend: Add quick action buttons for common tasks
+- [x] Frontend: Make dashboard mobile-responsive
+- [x] Test dashboard with different user roles
+- [x] Test dashboard with various data volumes

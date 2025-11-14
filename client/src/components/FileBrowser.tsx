@@ -54,6 +54,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [sortBy, setSortBy] = useState<"name" | "date" | "size" | "type">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [filterType, setFilterType] = useState<string>("all");
+  const [workflowStatusFilter, setWorkflowStatusFilter] = useState<string>("all");
   
   // Bulk selection state
   const [selectedFileIds, setSelectedFileIds] = useState<Set<number>>(new Set());
@@ -107,6 +108,11 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
       result = result.filter(file => getFileTypeCategory(file.mimeType, file.name) === filterType);
     }
 
+    // Apply workflow status filter
+    if (workflowStatusFilter !== 'all') {
+      result = result.filter(file => file.workflowStatus === workflowStatusFilter);
+    }
+
     // Apply sorting
     result.sort((a, b) => {
       let comparison = 0;
@@ -132,7 +138,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
     });
 
     return result;
-  }, [files, searchQuery, filterType, sortBy, sortOrder]);
+  }, [files, searchQuery, filterType, workflowStatusFilter, sortBy, sortOrder]);
 
   // Get unique file types for filter dropdown
   const fileTypes = useMemo(() => {
@@ -514,6 +520,37 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h3 className="text-lg font-semibold text-foreground">Files</h3>
             
+            {/* Workflow Status Filters */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {[
+                { value: 'all', label: 'All Files', count: files.length },
+                { value: 'draft', label: 'Draft', count: files.filter(f => f.workflowStatus === 'draft').length },
+                { value: 'under_review', label: 'Pending Review', count: files.filter(f => f.workflowStatus === 'under_review').length },
+                { value: 'approved', label: 'Approved', count: files.filter(f => f.workflowStatus === 'approved').length },
+                { value: 'rejected', label: 'Rejected', count: files.filter(f => f.workflowStatus === 'rejected').length },
+              ].map(status => (
+                <Button
+                  key={status.value}
+                  variant={workflowStatusFilter === status.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setWorkflowStatusFilter(status.value)}
+                  className="whitespace-nowrap"
+                >
+                  {status.label}
+                  {status.count > 0 && (
+                    <span className={cn(
+                      "ml-2 px-1.5 py-0.5 rounded-full text-xs",
+                      workflowStatusFilter === status.value
+                        ? "bg-primary-foreground/20"
+                        : "bg-muted"
+                    )}>
+                      {status.count}
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
+            
             {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {/* Search */}
@@ -572,7 +609,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
           ) : filteredAndSortedFiles.length > 0 ? (
             <div className="space-y-2">
               {/* Results count */}
-              {(searchQuery || filterType !== 'all') && (
+              {(searchQuery || filterType !== 'all' || workflowStatusFilter !== 'all') && (
                 <p className="text-sm text-muted-foreground">
                   Showing {filteredAndSortedFiles.length} of {files.length} files
                 </p>
@@ -646,7 +683,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
             <Card className="border-dashed border-border/50">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <File className="w-12 h-12 text-muted-foreground mb-4" />
-                {searchQuery || filterType !== 'all' ? (
+                {searchQuery || filterType !== 'all' || workflowStatusFilter !== 'all' ? (
                   <>
                     <p className="text-sm text-muted-foreground">No files match your filters</p>
                     <Button
@@ -655,6 +692,7 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                       onClick={() => {
                         setSearchQuery('');
                         setFilterType('all');
+                        setWorkflowStatusFilter('all');
                       }}
                       className="mt-2"
                     >

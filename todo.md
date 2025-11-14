@@ -258,3 +258,14 @@
 - [x] Frontend: Pending reviews widget for reviewers
 - [x] Test multi-reviewer workflows
 - [x] Test approval requirement logic
+
+## Workflow Status Filters in File Browser
+- [x] Add workflow status filter state to FileBrowser
+- [x] Create filter button UI (All, Draft, Pending Review, Approved, Rejected)
+- [x] Add file count badges to filter buttons
+- [x] Implement filter logic to show only files matching selected status
+- [x] Add active filter highlighting
+- [x] Make filters mobile-responsive with horizontal scroll
+- [x] Combine status filter with existing search and file type filters
+- [x] Add clear all filters button
+- [x] Test status filtering with various file sets

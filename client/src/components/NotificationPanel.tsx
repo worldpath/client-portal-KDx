@@ -11,7 +11,15 @@ import {
   Share2,
   Check,
   Bell,
+  Clock,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
 import { useLocation } from "wouter";
 
@@ -40,6 +48,14 @@ const colorMap = {
 export default function NotificationPanel({ onClose }: NotificationPanelProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
+  
+  const snoozeMutation = trpc.notifications.snooze.useMutation({
+    onSuccess: () => {
+      utils.notifications.list.invalidate();
+      utils.notifications.unreadCount.invalidate();
+    },
+  });
 
   const handleNotificationClick = (notification: typeof notifications[0]) => {
     if (notification.isRead === 0) {
@@ -90,10 +106,9 @@ export default function NotificationPanel({ onClose }: NotificationPanelProps) {
               const iconColor = colorMap[notification.type as keyof typeof colorMap] || "text-gray-500";
 
               return (
-                <button
+                <div
                   key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`w-full p-4 text-left hover:bg-accent/50 transition-colors ${
+                  className={`w-full p-4 hover:bg-accent/50 transition-colors ${
                     notification.isRead === 0 ? "bg-accent/20" : ""
                   }`}
                 >
@@ -101,7 +116,10 @@ export default function NotificationPanel({ onClose }: NotificationPanelProps) {
                     <div className={`flex-shrink-0 ${iconColor}`}>
                       <Icon className="w-5 h-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => handleNotificationClick(notification)}
+                      className="flex-1 min-w-0 text-left"
+                    >
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <p className="font-medium text-sm">{notification.title}</p>
                         {notification.isRead === 0 && (
@@ -116,9 +134,55 @@ export default function NotificationPanel({ onClose }: NotificationPanelProps) {
                           addSuffix: true,
                         })}
                       </p>
-                    </div>
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 flex-shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Clock className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => snoozeMutation.mutate({
+                            notificationId: notification.id,
+                            duration: "15min"
+                          })}
+                        >
+                          Snooze for 15 minutes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => snoozeMutation.mutate({
+                            notificationId: notification.id,
+                            duration: "1hr"
+                          })}
+                        >
+                          Snooze for 1 hour
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => snoozeMutation.mutate({
+                            notificationId: notification.id,
+                            duration: "4hr"
+                          })}
+                        >
+                          Snooze for 4 hours
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => snoozeMutation.mutate({
+                            notificationId: notification.id,
+                            duration: "tomorrow"
+                          })}
+                        >
+                          Snooze until tomorrow
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

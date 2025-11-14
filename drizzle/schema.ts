@@ -285,6 +285,7 @@ export const notifications = mysqlTable("notifications", {
   message: text("message").notNull(),
   fileId: int("fileId"), // Related file (optional)
   isRead: int("isRead").default(0).notNull(), // 0 = unread, 1 = read
+  snoozedUntil: timestamp("snoozedUntil"), // When snoozed notification should reappear
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   userIdx: index("user_idx").on(table.userId),

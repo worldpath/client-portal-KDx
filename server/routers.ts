@@ -1764,6 +1764,43 @@ export const appRouter = router({
         await db.markAllNotificationsAsRead(ctx.user.id);
         return { success: true };
       }),
+    
+    snooze: protectedProcedure
+      .input(z.object({ 
+        notificationId: z.number(),
+        duration: z.enum(["15min", "1hr", "4hr", "tomorrow"])
+      }))
+      .mutation(async ({ input }) => {
+        const now = new Date();
+        let snoozedUntil: Date;
+        
+        switch (input.duration) {
+          case "15min":
+            snoozedUntil = new Date(now.getTime() + 15 * 60 * 1000);
+            break;
+          case "1hr":
+            snoozedUntil = new Date(now.getTime() + 60 * 60 * 1000);
+            break;
+          case "4hr":
+            snoozedUntil = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+            break;
+          case "tomorrow":
+            snoozedUntil = new Date(now);
+            snoozedUntil.setDate(snoozedUntil.getDate() + 1);
+            snoozedUntil.setHours(9, 0, 0, 0); // 9 AM tomorrow
+            break;
+        }
+        
+        await db.snoozeNotification(input.notificationId, snoozedUntil);
+        return { success: true };
+      }),
+    
+    unsnooze: protectedProcedure
+      .input(z.object({ notificationId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.unsnoozeNotification(input.notificationId);
+        return { success: true };
+      }),
   }),
 });
 

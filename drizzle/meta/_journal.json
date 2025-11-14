@@ -78,6 +78,13 @@
       "when": 1763132829370,
       "tag": "0010_youthful_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1763143927432,
+      "tag": "0011_outstanding_prowler",
+      "breakpoints": true
     }
   ]
 }

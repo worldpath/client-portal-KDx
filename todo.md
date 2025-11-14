@@ -409,3 +409,15 @@
 - [ ] Add notification sound (optional - future enhancement)
 - [x] Test real-time delivery across multiple browser tabs
 - [x] Test notification persistence and read status
+
+## Notification Snooze Feature
+- [x] Add snoozedUntil field to notifications table
+- [x] Create snoozeNotification backend procedure
+- [x] Create unsnoozeNotification backend procedure
+- [x] Update getNotifications to filter snoozed notifications
+- [x] Add snooze button to notification items in panel
+- [x] Create snooze duration selector dropdown (15min, 1hr, 4hr, tomorrow)
+- [x] Implement snooze action handler in NotificationPanel
+- [x] Add visual indicator for snoozed notifications
+- [x] Update notification count to exclude snoozed items
+- [x] Test snooze expiration and automatic reappearance

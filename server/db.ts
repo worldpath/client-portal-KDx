@@ -1458,10 +1458,19 @@ export async function getNotifications(userId: number, limit: number = 50) {
   const db = await getDb();
   if (!db) return [];
 
+  const now = new Date();
   return await db
     .select()
     .from(notifications)
-    .where(eq(notifications.userId, userId))
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        or(
+          isNull(notifications.snoozedUntil),
+          sql`${notifications.snoozedUntil} <= ${now}`
+        )
+      )
+    )
     .orderBy(desc(notifications.createdAt))
     .limit(limit);
 }
@@ -1470,13 +1479,18 @@ export async function getUnreadNotificationCount(userId: number) {
   const db = await getDb();
   if (!db) return 0;
 
+  const now = new Date();
   const result = await db
     .select({ count: sql<number>`count(*)` })
     .from(notifications)
     .where(
       and(
         eq(notifications.userId, userId),
-        eq(notifications.isRead, 0)
+        eq(notifications.isRead, 0),
+        or(
+          isNull(notifications.snoozedUntil),
+          sql`${notifications.snoozedUntil} <= ${now}`
+        )
       )
     );
 
@@ -1516,4 +1530,24 @@ export async function getUsersByRole(role: 'admin' | 'client') {
     .select()
     .from(users)
     .where(eq(users.role, role));
+}
+
+export async function snoozeNotification(notificationId: number, snoozedUntil: Date) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return await db
+    .update(notifications)
+    .set({ snoozedUntil })
+    .where(eq(notifications.id, notificationId));
+}
+
+export async function unsnoozeNotification(notificationId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return await db
+    .update(notifications)
+    .set({ snoozedUntil: null })
+    .where(eq(notifications.id, notificationId));
 }

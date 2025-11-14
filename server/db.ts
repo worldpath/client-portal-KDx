@@ -1287,3 +1287,62 @@ export async function updateUserPreferences(
       .where(eq(notificationPreferences.userId, userId));
   }
 }
+
+
+export async function getPendingApprovalsOverview() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get all files under review with their reviewer information
+  const pendingFiles = await db
+    .select({
+      fileId: files.id,
+      fileName: files.name,
+      fileUrl: files.url,
+      folderId: files.folderId,
+      uploadedBy: files.uploadedBy,
+      uploaderName: users.name,
+      uploadedAt: files.createdAt,
+      approvalRequirement: files.approvalRequirement,
+      reviewerId: fileReviewers.reviewerId,
+      reviewerName: sql<string>`reviewer.name`,
+      reviewStatus: fileReviewers.reviewStatus,
+      assignedAt: fileReviewers.assignedAt,
+    })
+    .from(files)
+    .leftJoin(users, eq(files.uploadedBy, users.id))
+    .leftJoin(fileReviewers, eq(files.id, fileReviewers.fileId))
+    .leftJoin(sql`users as reviewer`, sql`${fileReviewers.reviewerId} = reviewer.id`)
+    .where(eq(files.workflowStatus, "under_review"))
+    .orderBy(desc(files.createdAt));
+  
+  // Group by file and aggregate reviewers
+  const fileMap = new Map<number, any>();
+  
+  for (const row of pendingFiles) {
+    if (!fileMap.has(row.fileId)) {
+      fileMap.set(row.fileId, {
+        id: row.fileId,
+        name: row.fileName,
+        url: row.fileUrl,
+        folderId: row.folderId,
+        uploadedBy: row.uploadedBy,
+        uploaderName: row.uploaderName,
+        uploadedAt: row.uploadedAt,
+        approvalRequirement: row.approvalRequirement,
+        reviewers: [],
+      });
+    }
+    
+    if (row.reviewerId) {
+      fileMap.get(row.fileId).reviewers.push({
+        id: row.reviewerId,
+        name: row.reviewerName,
+        status: row.reviewStatus,
+        assignedAt: row.assignedAt,
+      });
+    }
+  }
+  
+  return Array.from(fileMap.values());
+}

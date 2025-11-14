@@ -1487,6 +1487,11 @@ export const appRouter = router({
       .query(async ({ ctx }) => {
         return await db.getPendingReviewsForReviewer(ctx.user.id);
       }),
+    
+    pendingApprovalsOverview: adminProcedure
+      .query(async () => {
+        return await db.getPendingApprovalsOverview();
+      }),
   }),
 
   // ============ NOTIFICATION PREFERENCES ============

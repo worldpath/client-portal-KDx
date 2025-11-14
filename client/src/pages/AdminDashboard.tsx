@@ -11,6 +11,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import FileBrowser from "@/components/FileBrowser";
 import UserManagement from "@/components/UserManagement";
 import AuditLogViewer from "@/components/AuditLogViewer";
+import PendingApprovalsWidget from "@/components/PendingApprovalsWidget";
 
 type Tab = "files" | "users" | "audit";
 
@@ -131,8 +132,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content */}
-      <main className="container py-6">
-        {activeTab === "files" && <FileBrowser isAdmin={true} />}
+      <main className="container py-6 space-y-6">
+        {activeTab === "files" && (
+          <>
+            <PendingApprovalsWidget />
+            <FileBrowser isAdmin={true} />
+          </>
+        )}
         {activeTab === "users" && <UserManagement />}
         {activeTab === "audit" && <AuditLogViewer />}
       </main>

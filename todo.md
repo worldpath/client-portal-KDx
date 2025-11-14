@@ -314,3 +314,18 @@
 - [x] Test preference toggles work correctly
 - [ ] Test daily digest mode (future enhancement)
 - [x] Add settings link to user menu/navigation
+
+## Pending Approvals Dashboard Widget
+- [x] Create getPendingApprovalsOverview backend procedure
+- [x] Add tRPC endpoint for pending approvals data
+- [x] Build PendingApprovalsWidget component
+- [x] Add file count badge
+- [x] Display reviewer assignments for each file
+- [x] Add quick approve button with optional notes
+- [x] Add quick reject button with required reason
+- [x] Implement optimistic updates for quick actions
+- [x] Add loading states for actions
+- [x] Add empty state when no pending approvals
+- [x] Integrate widget into AdminDashboard
+- [x] Test quick actions work correctly
+- [x] Test widget updates after actions

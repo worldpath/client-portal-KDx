@@ -11,7 +11,8 @@ import {
   shareLinks, InsertShareLink,
   fileComments,
   commentMentions,
-  fileReviewers
+  fileReviewers,
+  notificationPreferences, InsertNotificationPreference
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1198,4 +1199,91 @@ export async function updateFileApprovalRequirement(fileId: number, requirement:
   await db.update(files)
     .set({ approvalRequirement: requirement as any })
     .where(eq(files.id, fileId));
+}
+
+
+// ============ NOTIFICATION PREFERENCES ============
+
+export async function getUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db
+    .select()
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, userId))
+    .limit(1);
+  
+  // Return existing preferences or default values
+  if (result.length > 0) {
+    return result[0];
+  }
+  
+  // Return default preferences if none exist
+  return {
+    userId,
+    emailReviewerAssignment: true,
+    emailStatusChange: true,
+    emailMentions: true,
+    emailShareLinks: true,
+    deliveryMode: "instant" as const,
+  };
+}
+
+export async function createDefaultPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    await db.insert(notificationPreferences).values({
+      userId,
+      emailReviewerAssignment: true,
+      emailStatusChange: true,
+      emailMentions: true,
+      emailShareLinks: true,
+      deliveryMode: "instant",
+    });
+  } catch (error) {
+    // Ignore duplicate key errors (preferences already exist)
+    console.log(`Preferences for user ${userId} may already exist`);
+  }
+}
+
+export async function updateUserPreferences(
+  userId: number,
+  preferences: {
+    emailReviewerAssignment?: boolean;
+    emailStatusChange?: boolean;
+    emailMentions?: boolean;
+    emailShareLinks?: boolean;
+    deliveryMode?: "instant" | "daily_digest";
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Check if preferences exist
+  const existing = await db
+    .select()
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, userId))
+    .limit(1);
+  
+  if (existing.length === 0) {
+    // Create new preferences with provided values
+    await db.insert(notificationPreferences).values({
+      userId,
+      emailReviewerAssignment: preferences.emailReviewerAssignment ?? true,
+      emailStatusChange: preferences.emailStatusChange ?? true,
+      emailMentions: preferences.emailMentions ?? true,
+      emailShareLinks: preferences.emailShareLinks ?? true,
+      deliveryMode: preferences.deliveryMode ?? "instant",
+    });
+  } else {
+    // Update existing preferences
+    await db
+      .update(notificationPreferences)
+      .set(preferences)
+      .where(eq(notificationPreferences.userId, userId));
+  }
 }

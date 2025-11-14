@@ -1030,18 +1030,22 @@ export const appRouter = router({
               
               // Send email notification for @mention
               if (user.email) {
-                try {
-                  await sendMentionNotification({
-                    recipientEmail: user.email,
-                    recipientName: user.name || 'User',
-                    fileName: file.name,
-                    fileId: file.id,
-                    mentionedBy: ctx.user.name || 'User',
-                    commentText: input.content,
-                    portalUrl,
-                  });
-                } catch (error) {
-                  console.error(`Failed to send mention notification to ${user.email}:`, error);
+                // Check user preferences
+                const prefs = await db.getUserPreferences(user.id);
+                if (prefs.emailMentions && prefs.deliveryMode === 'instant') {
+                  try {
+                    await sendMentionNotification({
+                      recipientEmail: user.email,
+                      recipientName: user.name || 'User',
+                      fileName: file.name,
+                      fileId: file.id,
+                      mentionedBy: ctx.user.name || 'User',
+                      commentText: input.content,
+                      portalUrl,
+                    });
+                  } catch (error) {
+                    console.error(`Failed to send mention notification to ${user.email}:`, error);
+                  }
                 }
               }
             }
@@ -1323,18 +1327,22 @@ export const appRouter = router({
         
         for (const reviewer of reviewers) {
           if (reviewer.email) {
-            try {
-              await sendReviewerAssignmentNotification({
-                reviewerEmail: reviewer.email,
-                reviewerName: reviewer.name || 'Reviewer',
-                fileName: file.name,
-                fileId: file.id,
-                assignedBy: ctx.user.name || 'Admin',
-                portalUrl,
-              });
-            } catch (error) {
-              console.error(`Failed to send email to ${reviewer.email}:`, error);
-              // Continue with other notifications even if one fails
+            // Check user preferences
+            const prefs = await db.getUserPreferences(reviewer.id);
+            if (prefs.emailReviewerAssignment && prefs.deliveryMode === 'instant') {
+              try {
+                await sendReviewerAssignmentNotification({
+                  reviewerEmail: reviewer.email,
+                  reviewerName: reviewer.name || 'Reviewer',
+                  fileName: file.name,
+                  fileId: file.id,
+                  assignedBy: ctx.user.name || 'Admin',
+                  portalUrl,
+                });
+              } catch (error) {
+                console.error(`Failed to send email to ${reviewer.email}:`, error);
+                // Continue with other notifications even if one fails
+              }
             }
           }
         }
@@ -1401,21 +1409,25 @@ export const appRouter = router({
         // Send email notification to file owner
         const fileOwner = await db.getUserById(file.uploadedBy);
         if (fileOwner && fileOwner.email) {
-          try {
-            const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
-            await sendStatusChangeNotification({
-              recipientEmail: fileOwner.email,
-              recipientName: fileOwner.name || 'User',
-              fileName: file.name,
-              fileId: file.id,
-              oldStatus: 'under_review',
-              newStatus: 'approved',
-              changedBy: ctx.user.name || 'Reviewer',
-              notes: input.notes,
-              portalUrl,
-            });
-          } catch (error) {
-            console.error(`Failed to send approval notification:`, error);
+          // Check user preferences
+          const prefs = await db.getUserPreferences(fileOwner.id);
+          if (prefs.emailStatusChange && prefs.deliveryMode === 'instant') {
+            try {
+              const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+              await sendStatusChangeNotification({
+                recipientEmail: fileOwner.email,
+                recipientName: fileOwner.name || 'User',
+                fileName: file.name,
+                fileId: file.id,
+                oldStatus: 'under_review',
+                newStatus: 'approved',
+                changedBy: ctx.user.name || 'Reviewer',
+                notes: input.notes,
+                portalUrl,
+              });
+            } catch (error) {
+              console.error(`Failed to send approval notification:`, error);
+            }
           }
         }
         
@@ -1446,21 +1458,25 @@ export const appRouter = router({
         // Send email notification to file owner
         const fileOwner = await db.getUserById(file.uploadedBy);
         if (fileOwner && fileOwner.email) {
-          try {
-            const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
-            await sendStatusChangeNotification({
-              recipientEmail: fileOwner.email,
-              recipientName: fileOwner.name || 'User',
-              fileName: file.name,
-              fileId: file.id,
-              oldStatus: 'under_review',
-              newStatus: 'rejected',
-              changedBy: ctx.user.name || 'Reviewer',
-              notes: input.reason,
-              portalUrl,
-            });
-          } catch (error) {
-            console.error(`Failed to send rejection notification:`, error);
+          // Check user preferences
+          const prefs = await db.getUserPreferences(fileOwner.id);
+          if (prefs.emailStatusChange && prefs.deliveryMode === 'instant') {
+            try {
+              const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+              await sendStatusChangeNotification({
+                recipientEmail: fileOwner.email,
+                recipientName: fileOwner.name || 'User',
+                fileName: file.name,
+                fileId: file.id,
+                oldStatus: 'under_review',
+                newStatus: 'rejected',
+                changedBy: ctx.user.name || 'Reviewer',
+                notes: input.reason,
+                portalUrl,
+              });
+            } catch (error) {
+              console.error(`Failed to send rejection notification:`, error);
+            }
           }
         }
         
@@ -1470,6 +1486,36 @@ export const appRouter = router({
     myPendingReviews: protectedProcedure
       .query(async ({ ctx }) => {
         return await db.getPendingReviewsForReviewer(ctx.user.id);
+      }),
+  }),
+
+  // ============ NOTIFICATION PREFERENCES ============
+  preferences: router({
+    get: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserPreferences(ctx.user.id);
+      }),
+    
+    update: protectedProcedure
+      .input(z.object({
+        emailReviewerAssignment: z.boolean().optional(),
+        emailStatusChange: z.boolean().optional(),
+        emailMentions: z.boolean().optional(),
+        emailShareLinks: z.boolean().optional(),
+        deliveryMode: z.enum(["instant", "daily_digest"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateUserPreferences(ctx.user.id, input);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'update_notification_preferences',
+          entityType: 'user',
+          entityId: ctx.user.id,
+          details: JSON.stringify(input),
+        });
+        
+        return { success: true };
       }),
   }),
 

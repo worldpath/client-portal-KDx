@@ -243,3 +243,29 @@ export const fileReviewers = mysqlTable("file_reviewers", {
 
 export type FileReviewer = typeof fileReviewers.$inferSelect;
 export type InsertFileReviewer = typeof fileReviewers.$inferInsert;
+
+/**
+ * User notification preferences table
+ */
+export const notificationPreferences = mysqlTable("notification_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(), // One preference record per user
+  
+  // Email notification toggles
+  emailReviewerAssignment: boolean("emailReviewerAssignment").default(true).notNull(),
+  emailStatusChange: boolean("emailStatusChange").default(true).notNull(),
+  emailMentions: boolean("emailMentions").default(true).notNull(),
+  emailShareLinks: boolean("emailShareLinks").default(true).notNull(),
+  
+  // Delivery mode
+  deliveryMode: mysqlEnum("deliveryMode", ["instant", "daily_digest"]).default("instant").notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdx: index("user_idx").on(table.userId),
+}));
+
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreference = typeof notificationPreferences.$inferInsert;

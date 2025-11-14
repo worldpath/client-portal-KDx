@@ -299,3 +299,18 @@
 - [x] Test email delivery with password-protected links
 - [x] Test email delivery with expiration dates
 - [x] Test email delivery with custom messages
+
+## User Notification Preferences Settings
+- [x] Design notification_preferences table schema
+- [x] Add notification_preferences table with user preferences
+- [x] Create getUserPreferences backend procedure
+- [x] Create updateUserPreferences backend procedure
+- [x] Create default preferences on user registration
+- [x] Build Settings page component with navigation
+- [x] Add notification preferences section to settings
+- [x] Add toggle switches for each notification type
+- [x] Add delivery mode selector (instant vs daily digest)
+- [x] Integrate preference checks into notification sending
+- [x] Test preference toggles work correctly
+- [ ] Test daily digest mode (future enhancement)
+- [x] Add settings link to user menu/navigation

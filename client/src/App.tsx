@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import SearchResults from "./pages/SearchResults";
 import SharedFile from "./pages/SharedFile";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/client"} component={ClientDashboard} />
+      <Route path={"/settings"} component={Settings} />
       <Route path={"/search/:query"} component={SearchResults} />
       <Route path={"/search"} component={SearchResults} />
       <Route path={"/share/:token"} component={SharedFile} />

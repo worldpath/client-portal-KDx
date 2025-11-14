@@ -12,6 +12,7 @@ import FileBrowser from "@/components/FileBrowser";
 import UserManagement from "@/components/UserManagement";
 import AuditLogViewer from "@/components/AuditLogViewer";
 import PendingApprovalsWidget from "@/components/PendingApprovalsWidget";
+import ReviewerWorkloadWidget from "@/components/ReviewerWorkloadWidget";
 
 type Tab = "files" | "users" | "audit";
 
@@ -135,7 +136,10 @@ export default function AdminDashboard() {
       <main className="container py-6 space-y-6">
         {activeTab === "files" && (
           <>
-            <PendingApprovalsWidget />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PendingApprovalsWidget />
+              <ReviewerWorkloadWidget />
+            </div>
             <FileBrowser isAdmin={true} />
           </>
         )}

@@ -1346,3 +1346,101 @@ export async function getPendingApprovalsOverview() {
   
   return Array.from(fileMap.values());
 }
+
+export async function getFileActivityTimeline(fileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get audit logs for this file
+  const logs = await db
+    .select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      details: auditLogs.details,
+      createdAt: auditLogs.createdAt,
+      userId: auditLogs.userId,
+      userName: users.name,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.userId, users.id))
+    .where(
+      and(
+        eq(auditLogs.entityType, 'file'),
+        eq(auditLogs.entityId, fileId)
+      )
+    )
+    .orderBy(desc(auditLogs.createdAt));
+
+  return logs;
+}
+
+export async function getReviewerWorkloadStats() {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get all reviewers with their pending review counts and stats
+  const reviewers = await db
+    .select({
+      reviewerId: fileReviewers.reviewerId,
+      reviewerName: users.name,
+      reviewStatus: fileReviewers.reviewStatus,
+      assignedAt: fileReviewers.assignedAt,
+      reviewedAt: fileReviewers.reviewedAt,
+    })
+    .from(fileReviewers)
+    .innerJoin(users, eq(fileReviewers.reviewerId, users.id))
+    .innerJoin(files, eq(fileReviewers.fileId, files.id))
+    .where(eq(files.workflowStatus, 'under_review'));
+
+  // Group by reviewer and calculate stats
+  const statsMap = new Map<number, {
+    reviewerId: number;
+    reviewerName: string;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    totalReviews: number;
+    avgReviewTimeHours: number | null;
+  }>();
+
+  for (const review of reviewers) {
+    if (!statsMap.has(review.reviewerId)) {
+      statsMap.set(review.reviewerId, {
+        reviewerId: review.reviewerId,
+        reviewerName: review.reviewerName || 'Unknown',
+        pendingCount: 0,
+        approvedCount: 0,
+        rejectedCount: 0,
+        totalReviews: 0,
+        avgReviewTimeHours: null,
+      });
+    }
+
+    const stats = statsMap.get(review.reviewerId)!;
+    stats.totalReviews++;
+
+    if (review.reviewStatus === 'pending') {
+      stats.pendingCount++;
+    } else if (review.reviewStatus === 'approved') {
+      stats.approvedCount++;
+    } else if (review.reviewStatus === 'rejected') {
+      stats.rejectedCount++;
+    }
+
+    // Calculate review time for completed reviews
+    if (review.reviewedAt && review.assignedAt) {
+      const reviewTimeMs = new Date(review.reviewedAt).getTime() - new Date(review.assignedAt).getTime();
+      const reviewTimeHours = reviewTimeMs / (1000 * 60 * 60);
+      
+      if (stats.avgReviewTimeHours === null) {
+        stats.avgReviewTimeHours = reviewTimeHours;
+      } else {
+        // Running average
+        const completedCount = stats.approvedCount + stats.rejectedCount;
+        stats.avgReviewTimeHours = ((stats.avgReviewTimeHours * (completedCount - 1)) + reviewTimeHours) / completedCount;
+      }
+    }
+  }
+
+  return Array.from(statsMap.values());
+}

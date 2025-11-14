@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Edit, Save, X, MessageSquare, GitBranch } from "lucide-react";
+import { Loader2, Edit, Save, X, MessageSquare, GitBranch, Clock } from "lucide-react";
 import { toast } from "sonner";
 import FileComments from "@/components/FileComments";
 import { WorkflowManager } from "@/components/WorkflowManager";
 import { MultiReviewerManager } from "@/components/MultiReviewerManager";
+import FileActivityTimeline from "@/components/FileActivityTimeline";
 
 interface FilePreviewProps {
   fileId: number;
@@ -135,7 +136,7 @@ export default function FilePreview({
         </DialogHeader>
 
         <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="w-4 h-4 mr-2" />
@@ -144,6 +145,10 @@ export default function FilePreview({
             <TabsTrigger value="workflow">
               <GitBranch className="w-4 h-4 mr-2" />
               Workflow
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              <Clock className="w-4 h-4 mr-2" />
+              Activity
             </TabsTrigger>
           </TabsList>
 
@@ -217,6 +222,10 @@ export default function FilePreview({
                 )}
               </div>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="activity" className="flex-1 overflow-auto mt-4">
+            <FileActivityTimeline fileId={fileId} />
           </TabsContent>
         </Tabs>
 

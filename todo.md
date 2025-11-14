@@ -345,3 +345,41 @@
 - [x] Clear selection after successful bulk action
 - [x] Test bulk approve with multiple files
 - [x] Test bulk reject with multiple files
+
+## File Activity Timeline
+- [x] Create getFileActivityTimeline backend procedure
+- [x] Add tRPC endpoint for file activity data
+- [x] Build FileActivityTimeline component
+- [x] Add timeline to file preview/details page
+- [x] Display all action types (upload, edit, comment, status change, reviewer assignment, share)
+- [x] Show user avatars and names for each action
+- [x] Add relative timestamps for each activity
+- [x] Implement expandable details for complex actions
+- [x] Add filter controls (action type, date range, user)
+- [x] Add empty state when no activity
+- [x] Integrate timeline into FilePreview component
+
+## Reviewer Workload Analytics
+- [x] Create getReviewerWorkloadStats backend procedure
+- [x] Calculate pending review count per reviewer
+- [x] Calculate average review time per reviewer
+- [x] Calculate approval/rejection rates
+- [x] Add tRPC endpoint for workload analytics
+- [x] Build ReviewerWorkloadWidget component
+- [x] Display reviewer statistics in card format
+- [x] Add workload distribution chart/visualization
+- [x] Show top reviewers by pending count
+- [x] Add sorting options (by pending, by avg time, by rate)
+- [x] Integrate widget into AdminDashboard
+
+## Advanced Filtering for Pending Approvals
+- [x] Add filter state management to PendingApprovalsWidget
+- [x] Create filter UI controls (dropdowns, date pickers)
+- [x] Add approval requirement type filter
+- [x] Add assigned reviewer filter
+- [x] Add upload date range filter
+- [x] Add uploader filter
+- [x] Implement client-side filtering logic
+- [x] Add "Clear Filters" button
+- [x] Show active filter count badge
+- [x] Persist filter state during session

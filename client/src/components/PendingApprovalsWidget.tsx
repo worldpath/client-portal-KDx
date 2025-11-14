@@ -13,8 +13,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Clock, CheckCircle, XCircle, Loader2, User, FileText, CheckSquare, Square } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Loader2, User, FileText, CheckSquare, Square, Filter, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface PendingFile {
@@ -47,6 +54,11 @@ export default function PendingApprovalsWidget() {
   const [bulkRejectDialogOpen, setBulkRejectDialogOpen] = useState(false);
   const [bulkNotes, setBulkNotes] = useState("");
   const [bulkReason, setBulkReason] = useState("");
+  
+  // Filter state
+  const [approvalRequirementFilter, setApprovalRequirementFilter] = useState<string>("all");
+  const [reviewerFilter, setReviewerFilter] = useState<string>("all");
+  const [uploaderFilter, setUploaderFilter] = useState<string>("all");
 
   const utils = trpc.useUtils();
 
@@ -166,10 +178,10 @@ export default function PendingApprovalsWidget() {
   };
   
   const toggleSelectAll = () => {
-    if (selectedFileIds.size === pendingFiles.length) {
+    if (selectedFileIds.size === filteredFiles.length) {
       setSelectedFileIds(new Set());
     } else {
-      setSelectedFileIds(new Set(pendingFiles.map(f => f.id)));
+      setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
     }
   };
   
@@ -203,6 +215,34 @@ export default function PendingApprovalsWidget() {
         return <Badge variant="secondary">Pending</Badge>;
     }
   };
+  
+  // Apply filters
+  const filteredFiles = pendingFiles.filter(file => {
+    if (approvalRequirementFilter !== "all" && file.approvalRequirement !== approvalRequirementFilter) {
+      return false;
+    }
+    if (uploaderFilter !== "all" && file.uploaderName !== uploaderFilter) {
+      return false;
+    }
+    if (reviewerFilter !== "all") {
+      const hasReviewer = file.reviewers.some((r: { name: string }) => r.name === reviewerFilter);
+      if (!hasReviewer) return false;
+    }
+    return true;
+  });
+  
+  // Get unique values for filters
+  const uniqueApprovalRequirements = Array.from(new Set(pendingFiles.map(f => f.approvalRequirement)));
+  const uniqueUploaders = Array.from(new Set(pendingFiles.map(f => f.uploaderName)));
+  const uniqueReviewers = Array.from(new Set(pendingFiles.flatMap(f => f.reviewers.map((r: { name: string }) => r.name))));
+  
+  const hasActiveFilters = approvalRequirementFilter !== "all" || reviewerFilter !== "all" || uploaderFilter !== "all";
+  
+  const clearFilters = () => {
+    setApprovalRequirementFilter("all");
+    setReviewerFilter("all");
+    setUploaderFilter("all");
+  };
 
   if (isLoading) {
     return (
@@ -224,7 +264,7 @@ export default function PendingApprovalsWidget() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
@@ -232,7 +272,7 @@ export default function PendingApprovalsWidget() {
               </CardTitle>
               {pendingFiles.length > 0 && (
                 <Badge variant="default" className="ml-2">
-                  {pendingFiles.length}
+                  {filteredFiles.length}
                 </Badge>
               )}
               {selectedFileIds.size > 0 && (
@@ -240,8 +280,14 @@ export default function PendingApprovalsWidget() {
                   {selectedFileIds.size} selected
                 </Badge>
               )}
+              {hasActiveFilters && (
+                <Badge variant="outline" className="ml-2 gap-1">
+                  <Filter className="w-3 h-3" />
+                  Filtered
+                </Badge>
+              )}
             </div>
-            {pendingFiles.length > 0 && (
+            {filteredFiles.length > 0 && (
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -254,7 +300,7 @@ export default function PendingApprovalsWidget() {
                   ) : (
                     <Square className="w-4 h-4" />
                   )}
-                  {selectedFileIds.size === pendingFiles.length ? "Deselect All" : "Select All"}
+                  {selectedFileIds.size === filteredFiles.length ? "Deselect All" : "Select All"}
                 </Button>
                 <Button
                   size="sm"
@@ -284,6 +330,70 @@ export default function PendingApprovalsWidget() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Filter Controls */}
+          {pendingFiles.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 pb-4 mb-4 border-b">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filters:</span>
+              </div>
+              
+              <Select value={approvalRequirementFilter} onValueChange={setApprovalRequirementFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Approval Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {uniqueApprovalRequirements.map(req => (
+                    <SelectItem key={req} value={req}>
+                      {req === 'all_must_approve' ? 'All Must Approve' : 'Any Can Approve'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={reviewerFilter} onValueChange={setReviewerFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Reviewer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Reviewers</SelectItem>
+                  {uniqueReviewers.map(reviewer => (
+                    <SelectItem key={reviewer} value={reviewer}>
+                      {reviewer}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={uploaderFilter} onValueChange={setUploaderFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Uploader" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Uploaders</SelectItem>
+                  {uniqueUploaders.map(uploader => (
+                    <SelectItem key={uploader} value={uploader}>
+                      {uploader}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {hasActiveFilters && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearFilters}
+                  className="gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          )}
+          
           {pendingFiles.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
@@ -291,9 +401,19 @@ export default function PendingApprovalsWidget() {
                 No files pending approval
               </p>
             </div>
+          ) : filteredFiles.length === 0 ? (
+            <div className="text-center py-8">
+              <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-sm text-muted-foreground mb-2">
+                No files match the current filters
+              </p>
+              <Button size="sm" variant="outline" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            </div>
           ) : (
             <div className="space-y-3">
-              {pendingFiles.map((file) => (
+              {filteredFiles.map((file) => (
                 <div
                   key={file.id}
                   className="p-4 border border-border rounded-lg space-y-3 hover:bg-accent/5 transition-colors"

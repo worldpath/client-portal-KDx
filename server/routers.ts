@@ -646,6 +646,25 @@ export const appRouter = router({
 
         return { files: fileInfos };
       }),
+    
+    activityTimeline: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Check permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+          }
+        }
+        
+        return await db.getFileActivityTimeline(input.fileId);
+      }),
   }),
 
   // ============ PERMISSIONS MANAGEMENT ============
@@ -1611,6 +1630,11 @@ export const appRouter = router({
     pendingApprovalsOverview: adminProcedure
       .query(async () => {
         return await db.getPendingApprovalsOverview();
+      }),
+    
+    reviewerWorkloadStats: adminProcedure
+      .query(async () => {
+        return await db.getReviewerWorkloadStats();
       }),
   }),
 

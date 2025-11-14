@@ -109,6 +109,15 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUsersByIds(ids: number[]) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (ids.length === 0) return [];
+  
+  return await db.select().from(users).where(inArray(users.id, ids));
+}
+
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];

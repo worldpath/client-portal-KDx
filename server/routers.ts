@@ -7,6 +7,12 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
 import * as db from "./db";
 import crypto from "crypto";
+import { 
+  sendReviewerAssignmentNotification,
+  sendStatusChangeNotification,
+  sendMentionNotification,
+  sendShareLinkNotification
+} from "./_core/emailNotification";
 
 // Helper to check if user is admin
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -988,9 +994,28 @@ export const appRouter = router({
         const mentionedNames = db.parseMentions(input.content);
         if (mentionedNames.length > 0) {
           const mentionedUsers = await db.getUsersByNames(mentionedNames);
+          const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+          
           for (const user of mentionedUsers) {
             if (user.id !== ctx.user.id) {
               await db.createMention(commentId, user.id);
+              
+              // Send email notification for @mention
+              if (user.email) {
+                try {
+                  await sendMentionNotification({
+                    recipientEmail: user.email,
+                    recipientName: user.name || 'User',
+                    fileName: file.name,
+                    fileId: file.id,
+                    mentionedBy: ctx.user.name || 'User',
+                    commentText: input.content,
+                    portalUrl,
+                  });
+                } catch (error) {
+                  console.error(`Failed to send mention notification to ${user.email}:`, error);
+                }
+              }
             }
           }
         }
@@ -1264,6 +1289,28 @@ export const appRouter = router({
           details: `Assigned ${input.reviewerIds.length} reviewers`,
         });
         
+        // Send email notifications to all assigned reviewers
+        const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+        const reviewers = await db.getUsersByIds(input.reviewerIds);
+        
+        for (const reviewer of reviewers) {
+          if (reviewer.email) {
+            try {
+              await sendReviewerAssignmentNotification({
+                reviewerEmail: reviewer.email,
+                reviewerName: reviewer.name || 'Reviewer',
+                fileName: file.name,
+                fileId: file.id,
+                assignedBy: ctx.user.name || 'Admin',
+                portalUrl,
+              });
+            } catch (error) {
+              console.error(`Failed to send email to ${reviewer.email}:`, error);
+              // Continue with other notifications even if one fails
+            }
+          }
+        }
+        
         return { success: true };
       }),
     
@@ -1308,6 +1355,11 @@ export const appRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
         await db.approveFileByReviewer(input.fileId, ctx.user.id, input.notes);
         
         await db.createAuditLog({
@@ -1318,6 +1370,27 @@ export const appRouter = router({
           details: input.notes || 'File approved',
         });
         
+        // Send email notification to file owner
+        const fileOwner = await db.getUserById(file.uploadedBy);
+        if (fileOwner && fileOwner.email) {
+          try {
+            const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+            await sendStatusChangeNotification({
+              recipientEmail: fileOwner.email,
+              recipientName: fileOwner.name || 'User',
+              fileName: file.name,
+              fileId: file.id,
+              oldStatus: 'under_review',
+              newStatus: 'approved',
+              changedBy: ctx.user.name || 'Reviewer',
+              notes: input.notes,
+              portalUrl,
+            });
+          } catch (error) {
+            console.error(`Failed to send approval notification:`, error);
+          }
+        }
+        
         return { success: true };
       }),
     
@@ -1327,6 +1400,11 @@ export const appRouter = router({
         reason: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
         await db.rejectFileByReviewer(input.fileId, ctx.user.id, input.reason);
         
         await db.createAuditLog({
@@ -1336,6 +1414,27 @@ export const appRouter = router({
           entityId: input.fileId,
           details: input.reason,
         });
+        
+        // Send email notification to file owner
+        const fileOwner = await db.getUserById(file.uploadedBy);
+        if (fileOwner && fileOwner.email) {
+          try {
+            const portalUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+            await sendStatusChangeNotification({
+              recipientEmail: fileOwner.email,
+              recipientName: fileOwner.name || 'User',
+              fileName: file.name,
+              fileId: file.id,
+              oldStatus: 'under_review',
+              newStatus: 'rejected',
+              changedBy: ctx.user.name || 'Reviewer',
+              notes: input.reason,
+              portalUrl,
+            });
+          } catch (error) {
+            console.error(`Failed to send rejection notification:`, error);
+          }
+        }
         
         return { success: true };
       }),

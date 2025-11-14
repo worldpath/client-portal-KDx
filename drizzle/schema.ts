@@ -74,7 +74,11 @@ export const files = mysqlTable("files", {
   reviewerId: int("reviewerId"), // Legacy single reviewer (kept for backward compatibility)
   reviewNotes: text("reviewNotes"), // Legacy review notes
   reviewedAt: timestamp("reviewedAt"), // When review was completed
-  approvalRequirement: mysqlEnum("approvalRequirement", ["all_must_approve", "majority_must_approve", "any_can_approve"]).default("all_must_approve").notNull(),
+  approvalRequirement: mysqlEnum("approvalRequirement", [
+    "all_must_approve",
+    "majority_must_approve",
+    "any_can_approve"
+  ]).default("all_must_approve").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

@@ -269,3 +269,21 @@
 - [x] Combine status filter with existing search and file type filters
 - [x] Add clear all filters button
 - [x] Test status filtering with various file sets
+
+## Email Notification System
+- [ ] Add notification_preferences table to database schema
+- [ ] Add notification_log table to track sent emails
+- [x] Create email service module with SMTP configuration
+- [x] Design email templates (reviewer assignment, status change, @mention, share link)
+- [x] Implement notification for reviewer assignment
+- [x] Implement notification for file status changes (submitted, approved, rejected)
+- [x] Implement notification for @mentions in comments
+- [ ] Implement notification for share link creation
+- [ ] Add notification preferences UI for users
+- [ ] Add email notification toggle for each event type
+- [ ] Integrate notifications into workflow procedures
+- [ ] Integrate notifications into comment system
+- [ ] Integrate notifications into share link creation
+- [ ] Add notification history view in user settings
+- [ ] Test email delivery for all notification types
+- [ ] Add unsubscribe functionality

@@ -12,7 +12,8 @@ import {
   fileComments,
   commentMentions,
   fileReviewers,
-  notificationPreferences, InsertNotificationPreference
+  notificationPreferences, InsertNotificationPreference,
+  notifications, InsertNotification
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1443,4 +1444,76 @@ export async function getReviewerWorkloadStats() {
   }
 
   return Array.from(statsMap.values());
+}
+
+export async function createNotification(notification: InsertNotification) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(notifications).values(notification);
+  return result;
+}
+
+export async function getNotifications(userId: number, limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, 0)
+      )
+    );
+
+  return result[0]?.count || 0;
+}
+
+export async function markNotificationAsRead(notificationId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(notifications)
+    .set({ isRead: 1 })
+    .where(eq(notifications.id, notificationId));
+}
+
+export async function markAllNotificationsAsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(notifications)
+    .set({ isRead: 1 })
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, 0)
+      )
+    );
+}
+
+export async function getUsersByRole(role: 'admin' | 'client') {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(users)
+    .where(eq(users.role, role));
 }

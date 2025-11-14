@@ -13,6 +13,7 @@ import {
   sendMentionNotification,
   sendShareLinkNotification
 } from "./_core/emailNotification";
+import { createAndBroadcastNotification } from "./_core/notificationHelper";
 
 // Helper to check if user is admin
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -263,6 +264,20 @@ export const appRouter = router({
           folderId: input.folderId,
           size: input.size 
         }, ctx.req);
+
+        // Notify admins of new file upload
+        const admins = await db.getUsersByRole('admin');
+        for (const admin of admins) {
+          if (admin.id !== ctx.user.id) {
+            await createAndBroadcastNotification({
+              userId: admin.id,
+              type: 'file_upload',
+              title: 'New File Uploaded',
+              message: `${ctx.user.name || 'A user'} uploaded "${input.name}"`,
+              fileId,
+            });
+          }
+        }
 
         return { success: true, fileId, url };
       }),
@@ -1067,6 +1082,15 @@ export const appRouter = router({
                   }
                 }
               }
+              
+              // Send in-app notification
+              await createAndBroadcastNotification({
+                userId: user.id,
+                type: 'comment_mention',
+                title: 'You were mentioned',
+                message: `${ctx.user.name || 'Someone'} mentioned you in a comment on "${file.name}"`,
+                fileId: file.id,
+              });
             }
           }
         }
@@ -1364,6 +1388,15 @@ export const appRouter = router({
               }
             }
           }
+          
+          // Send in-app notification
+          await createAndBroadcastNotification({
+            userId: reviewer.id,
+            type: 'reviewer_assigned',
+            title: 'Assigned as Reviewer',
+            message: `${ctx.user.name || 'Admin'} assigned you to review "${file.name}"`,
+            fileId: file.id,
+          });
         }
         
         return { success: true };
@@ -1448,6 +1481,15 @@ export const appRouter = router({
               console.error(`Failed to send approval notification:`, error);
             }
           }
+          
+          // Send in-app notification
+          await createAndBroadcastNotification({
+            userId: fileOwner.id,
+            type: 'file_approved',
+            title: 'File Approved',
+            message: `${ctx.user.name || 'A reviewer'} approved "${file.name}"`,
+            fileId: file.id,
+          });
         }
         
         return { success: true };
@@ -1497,6 +1539,15 @@ export const appRouter = router({
               console.error(`Failed to send rejection notification:`, error);
             }
           }
+          
+          // Send in-app notification
+          await createAndBroadcastNotification({
+            userId: fileOwner.id,
+            type: 'file_rejected',
+            title: 'File Rejected',
+            message: `${ctx.user.name || 'A reviewer'} rejected "${file.name}"`,
+            fileId: file.id,
+          });
         }
         
         return { success: true };
@@ -1685,6 +1736,33 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().default(50) }))
       .query(async ({ input }) => {
         return await db.getRecentAuditLogs(input.limit);
+      }),
+  }),
+
+  // ============ NOTIFICATIONS ============
+  notifications: router({
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().default(50) }))
+      .query(async ({ ctx, input }) => {
+        return await db.getNotifications(ctx.user.id, input.limit);
+      }),
+    
+    unreadCount: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUnreadNotificationCount(ctx.user.id);
+      }),
+    
+    markAsRead: protectedProcedure
+      .input(z.object({ notificationId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.markNotificationAsRead(input.notificationId);
+        return { success: true };
+      }),
+    
+    markAllAsRead: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await db.markAllNotificationsAsRead(ctx.user.id);
+        return { success: true };
       }),
   }),
 });

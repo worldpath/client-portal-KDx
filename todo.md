@@ -383,3 +383,29 @@
 - [x] Add "Clear Filters" button
 - [x] Show active filter count badge
 - [x] Persist filter state during session
+
+## Real-Time Notification System
+- [x] Design notification schema (id, userId, type, title, message, fileId, isRead, createdAt)
+- [x] Create notifications table in database
+- [x] Add notification types enum (file_upload, file_approved, file_rejected, comment_mention, reviewer_assigned, share_created)
+- [x] Create getNotifications backend procedure
+- [x] Create markNotificationAsRead backend procedure
+- [x] Create markAllNotificationsAsRead backend procedure
+- [x] Create getUnreadNotificationCount backend procedure
+- [x] Build SSE endpoint for real-time notification streaming
+- [x] Create notification broadcasting helper function
+- [x] Build NotificationBell component with unread count badge
+- [x] Build NotificationPanel dropdown component
+- [x] Add notification bell to DashboardLayout header
+- [x] Implement SSE connection in frontend
+- [x] Add auto-reconnection logic for SSE
+- [x] Integrate notification creation into file upload workflow
+- [x] Integrate notification creation into approval workflow
+- [x] Integrate notification creation into rejection workflow
+- [x] Integrate notification creation into comment mention workflow
+- [x] Integrate notification creation into reviewer assignment workflow
+- [ ] Integrate notification creation into share link workflow (N/A - share links notify external users)
+- [x] Add click handlers to navigate to relevant files
+- [ ] Add notification sound (optional - future enhancement)
+- [x] Test real-time delivery across multiple browser tabs
+- [x] Test notification persistence and read status

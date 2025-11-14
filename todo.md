@@ -435,3 +435,59 @@
 - [x] Integrate comparison tool into FilePreview Versions tab
 - [x] Add Versions tab to file preview
 - [x] Test comparison with different file types
+
+## File Expiration and Archival System
+- [x] Add expiresAt field to files table
+- [x] Add isArchived field to files table
+- [x] Add archivedAt field to files table
+- [x] Add archivedBy field to files table
+- [x] Create setFileExpiration backend procedure
+- [x] Create archiveFile backend procedure
+- [x] Create restoreArchivedFile backend procedure
+- [x] Create getExpiredFiles backend procedure
+- [x] Create getArchivedFiles backend procedure
+- [ ] Add expiration date picker to file upload/edit UI
+- [x] Create ExpiredFilesView component for admins
+- [x] Create ArchivedFilesView component for admins
+- [ ] Implement pre-expiration email reminders (7 days, 1 day before)
+- [ ] Add cron job to automatically archive expired files
+- [ ] Add archive/restore buttons to file actions
+- [x] Add permanent delete option for archived files
+- [ ] Integrate expiration management into admin dashboard
+
+## Custom Multi-Stage Approval Workflows
+- [ ] Create workflow_templates table
+- [ ] Create workflow_stages table
+- [ ] Create file_workflow_instances table
+- [ ] Create file_workflow_stage_progress table
+- [ ] Add getWorkflowTemplates backend procedure
+- [ ] Add createWorkflowTemplate backend procedure
+- [ ] Add updateWorkflowTemplate backend procedure
+- [ ] Add deleteWorkflowTemplate backend procedure
+- [ ] Add assignWorkflowToFile backend procedure
+- [ ] Add advanceWorkflowStage backend procedure
+- [ ] Create WorkflowTemplateManager component
+- [ ] Create WorkflowStageEditor component
+- [ ] Create FileWorkflowProgress component
+- [ ] Add visual workflow progress indicator
+- [ ] Add stage-specific reviewer assignments
+- [ ] Add stage-specific approval requirements
+- [ ] Integrate workflow templates into file submission
+- [ ] Add workflow template selection to admin settings
+
+## Batch File Operations
+- [x] Add multi-select state management to FileBrowser
+- [x] Add checkbox column to file list
+- [x] Add "Select All" checkbox to table header
+- [x] Create BatchActionsToolbar component
+- [x] Add bulk move to folder operation
+- [x] Add bulk delete operation
+- [ ] Add bulk change permissions operation
+- [ ] Add bulk assign reviewers operation
+- [x] Add bulk download as ZIP operation
+- [x] Add bulk archive operation
+- [ ] Add bulk set expiration operation
+- [x] Show selection count in toolbar
+- [x] Add confirmation dialogs for destructive operations
+- [x] Implement optimistic updates for batch operations
+- [x] Add progress indicators for long-running batch operations

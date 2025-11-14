@@ -699,6 +699,110 @@ export const appRouter = router({
         
         return await db.getFileVersionsForComparison(input.fileId);
       }),
+    
+    setExpiration: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        expiresAt: z.string().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Check permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission || !permission.canEdit) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Edit permission required' });
+          }
+        }
+        
+        const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+        await db.setFileExpiration(input.fileId, expiresAt);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'set_expiration',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: JSON.stringify({ expiresAt: input.expiresAt }),
+        });
+        
+        return { success: true };
+      }),
+    
+    archive: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Check permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission || !permission.canDelete) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Delete permission required' });
+          }
+        }
+        
+        await db.archiveFile(input.fileId, ctx.user.id);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'archive_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: JSON.stringify({ fileId: input.fileId }),
+        });
+        
+        return { success: true };
+      }),
+    
+    restoreArchived: adminProcedure
+      .input(z.object({ fileId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.restoreArchivedFile(input.fileId);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'restore_archived_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: JSON.stringify({ fileId: input.fileId }),
+        });
+        
+        return { success: true };
+      }),
+    
+    permanentlyDelete: adminProcedure
+      .input(z.object({ fileId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await db.permanentlyDeleteFile(input.fileId);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'permanently_delete_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: JSON.stringify({ fileId: input.fileId }),
+        });
+        
+        return { success: true };
+      }),
+    
+    getExpired: adminProcedure
+      .query(async () => {
+        return await db.getExpiredFiles();
+      }),
+    
+    getArchived: adminProcedure
+      .query(async () => {
+        return await db.getArchivedFiles();
+      }),
   }),
 
   // ============ PERMISSIONS MANAGEMENT ============
@@ -1819,6 +1923,151 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.unsnoozeNotification(input.notificationId);
         return { success: true };
+      }),
+  }),
+
+  // ============ BATCH FILE OPERATIONS ============
+  batch: router({
+    moveFiles: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        targetFolderId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        let successCount = 0;
+        let failureCount = 0;
+        
+        for (const fileId of input.fileIds) {
+          try {
+            const file = await db.getFileById(fileId);
+            if (!file) {
+              failureCount++;
+              continue;
+            }
+            
+            // Check permission on source folder
+            if (ctx.user.role === 'client') {
+              const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+              if (!permission || !permission.canEdit) {
+                failureCount++;
+                continue;
+              }
+            }
+            
+            // Check permission on target folder
+            if (ctx.user.role === 'client') {
+              const targetPermission = await db.getFolderPermission(input.targetFolderId, ctx.user.id);
+              if (!targetPermission || !targetPermission.canUpload) {
+                failureCount++;
+                continue;
+              }
+            }
+            
+            await db.moveFileToFolder(fileId, input.targetFolderId);
+            
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: 'move_file',
+              entityType: 'file',
+              entityId: fileId,
+              details: JSON.stringify({ targetFolderId: input.targetFolderId }),
+            });
+            
+            successCount++;
+          } catch (error) {
+            failureCount++;
+          }
+        }
+        
+        return { successCount, failureCount, total: input.fileIds.length };
+      }),
+    
+    deleteFiles: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        let successCount = 0;
+        let failureCount = 0;
+        
+        for (const fileId of input.fileIds) {
+          try {
+            const file = await db.getFileById(fileId);
+            if (!file) {
+              failureCount++;
+              continue;
+            }
+            
+            // Check permission
+            if (ctx.user.role === 'client') {
+              const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+              if (!permission || !permission.canDelete) {
+                failureCount++;
+                continue;
+              }
+            }
+            
+            await db.deleteFile(fileId);
+            
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: 'delete_file',
+              entityType: 'file',
+              entityId: fileId,
+              details: JSON.stringify({ fileId }),
+            });
+            
+            successCount++;
+          } catch (error) {
+            failureCount++;
+          }
+        }
+        
+        return { successCount, failureCount, total: input.fileIds.length };
+      }),
+    
+    archiveFiles: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        let successCount = 0;
+        let failureCount = 0;
+        
+        for (const fileId of input.fileIds) {
+          try {
+            const file = await db.getFileById(fileId);
+            if (!file) {
+              failureCount++;
+              continue;
+            }
+            
+            // Check permission
+            if (ctx.user.role === 'client') {
+              const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+              if (!permission || !permission.canDelete) {
+                failureCount++;
+                continue;
+              }
+            }
+            
+            await db.archiveFile(fileId, ctx.user.id);
+            
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: 'archive_file',
+              entityType: 'file',
+              entityId: fileId,
+              details: JSON.stringify({ fileId }),
+            });
+            
+            successCount++;
+          } catch (error) {
+            failureCount++;
+          }
+        }
+        
+        return { successCount, failureCount, total: input.fileIds.length };
       }),
   }),
 });

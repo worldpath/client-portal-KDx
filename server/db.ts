@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or, sql, like } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, isNotNull, or, sql, like, lte, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, 
@@ -1637,4 +1637,160 @@ export async function restoreFileVersion(fileId: number, versionId: number, user
   });
 
   return { success: true, newVersion: currentVersionNumber + 1 };
+}
+
+export async function setFileExpiration(fileId: number, expiresAt: Date | null) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(files)
+    .set({ expiresAt, updatedAt: new Date() })
+    .where(eq(files.id, fileId));
+
+  return { success: true };
+}
+
+export async function archiveFile(fileId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(files)
+    .set({
+      isArchived: 1,
+      archivedAt: new Date(),
+      archivedBy: userId,
+      updatedAt: new Date(),
+    })
+    .where(eq(files.id, fileId));
+
+  return { success: true };
+}
+
+export async function restoreArchivedFile(fileId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(files)
+    .set({
+      isArchived: 0,
+      archivedAt: null,
+      archivedBy: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(files.id, fileId));
+
+  return { success: true };
+}
+
+export async function getExpiredFiles() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  const expiredFiles = await db
+    .select({
+      id: files.id,
+      name: files.name,
+      folderId: files.folderId,
+      expiresAt: files.expiresAt,
+      isArchived: files.isArchived,
+      uploadedBy: files.uploadedBy,
+      uploaderName: users.name,
+      uploaderEmail: users.email,
+      createdAt: files.createdAt,
+    })
+    .from(files)
+    .leftJoin(users, eq(files.uploadedBy, users.id))
+    .where(
+      and(
+        isNotNull(files.expiresAt),
+        lte(files.expiresAt, now),
+        eq(files.isArchived, 0)
+      )
+    )
+    .orderBy(desc(files.expiresAt));
+
+  return expiredFiles;
+}
+
+export async function getArchivedFiles() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const archivedFiles = await db
+    .select({
+      id: files.id,
+      name: files.name,
+      folderId: files.folderId,
+      size: files.size,
+      archivedAt: files.archivedAt,
+      archivedBy: files.archivedBy,
+      archiverName: users.name,
+      archiverEmail: users.email,
+      uploadedBy: files.uploadedBy,
+      createdAt: files.createdAt,
+    })
+    .from(files)
+    .leftJoin(users, eq(files.archivedBy, users.id))
+    .where(eq(files.isArchived, 1))
+    .orderBy(desc(files.archivedAt));
+
+  return archivedFiles;
+}
+
+export async function getFilesExpiringWithin(days: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + days);
+
+  const expiringFiles = await db
+    .select({
+      id: files.id,
+      name: files.name,
+      expiresAt: files.expiresAt,
+      uploadedBy: files.uploadedBy,
+      uploaderName: users.name,
+      uploaderEmail: users.email,
+    })
+    .from(files)
+    .leftJoin(users, eq(files.uploadedBy, users.id))
+    .where(
+      and(
+        isNotNull(files.expiresAt),
+        gte(files.expiresAt, now),
+        lte(files.expiresAt, futureDate),
+        eq(files.isArchived, 0)
+      )
+    )
+    .orderBy(files.expiresAt);
+
+  return expiringFiles;
+}
+
+export async function permanentlyDeleteFile(fileId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Delete file record (cascade will handle related records if configured)
+  await db.delete(files).where(eq(files.id, fileId));
+
+  return { success: true };
+}
+
+export async function moveFileToFolder(fileId: number, targetFolderId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(files)
+    .set({ folderId: targetFolderId, updatedAt: new Date() })
+    .where(eq(files.id, fileId));
+
+  return { success: true };
 }

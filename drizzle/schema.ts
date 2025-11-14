@@ -79,6 +79,10 @@ export const files = mysqlTable("files", {
     "majority_must_approve",
     "any_can_approve"
   ]).default("all_must_approve").notNull(),
+  expiresAt: timestamp("expiresAt"), // Optional expiration date
+  isArchived: int("isArchived").default(0).notNull(), // 0 = active, 1 = archived
+  archivedAt: timestamp("archivedAt"), // When file was archived
+  archivedBy: int("archivedBy"), // User who archived the file
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

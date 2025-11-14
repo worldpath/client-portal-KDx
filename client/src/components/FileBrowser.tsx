@@ -27,7 +27,8 @@ import {
   SortDesc,
   Filter,
   History,
-  Share
+  Share,
+  Archive
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -199,9 +200,12 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   });
 
   // Bulk delete mutation
-  const bulkDeleteMutation = trpc.files.bulkDelete.useMutation({
+  const bulkDeleteMutation = trpc.batch.deleteFiles.useMutation({
     onSuccess: (data) => {
-      toast.success(`${data.count} file(s) deleted successfully`);
+      const message = data.successCount === data.total 
+        ? `${data.successCount} file(s) deleted successfully`
+        : `${data.successCount} of ${data.total} file(s) deleted (${data.failureCount} failed)`;
+      toast.success(message);
       setSelectedFileIds(new Set());
       utils.files.list.invalidate();
     },
@@ -211,9 +215,12 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   });
 
   // Bulk move mutation
-  const bulkMoveMutation = trpc.files.bulkMove.useMutation({
+  const bulkMoveMutation = trpc.batch.moveFiles.useMutation({
     onSuccess: (data) => {
-      toast.success(`${data.count} file(s) moved successfully`);
+      const message = data.successCount === data.total
+        ? `${data.successCount} file(s) moved successfully`
+        : `${data.successCount} of ${data.total} file(s) moved (${data.failureCount} failed)`;
+      toast.success(message);
       setSelectedFileIds(new Set());
       setShowMoveDialog(false);
       setTargetFolderId(undefined);
@@ -221,6 +228,21 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
     },
     onError: (error) => {
       toast.error(error.message || "Failed to move files");
+    },
+  });
+
+  // Bulk archive mutation
+  const bulkArchiveMutation = trpc.batch.archiveFiles.useMutation({
+    onSuccess: (data) => {
+      const message = data.successCount === data.total
+        ? `${data.successCount} file(s) archived successfully`
+        : `${data.successCount} of ${data.total} file(s) archived (${data.failureCount} failed)`;
+      toast.success(message);
+      setSelectedFileIds(new Set());
+      utils.files.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to archive files");
     },
   });
 
@@ -335,6 +357,13 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const handleBulkDownload = () => {
     if (selectedFileIds.size === 0) return;
     bulkDownloadMutation.mutate({ fileIds: Array.from(selectedFileIds) });
+  };
+
+  const handleBulkArchive = () => {
+    if (selectedFileIds.size === 0) return;
+    if (confirm(`Archive ${selectedFileIds.size} file(s)? They can be restored later from the Archived Files view.`)) {
+      bulkArchiveMutation.mutate({ fileIds: Array.from(selectedFileIds) });
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -499,6 +528,15 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                         onClick={() => setShowMoveDialog(true)}
                       >
                         Move
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkArchive}
+                        disabled={bulkArchiveMutation.isPending}
+                      >
+                        <Archive className="w-4 h-4 mr-1" />
+                        Archive
                       </Button>
                       <Button
                         variant="outline"

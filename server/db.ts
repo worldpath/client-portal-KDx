@@ -1551,3 +1551,90 @@ export async function unsnoozeNotification(notificationId: number) {
     .set({ snoozedUntil: null })
     .where(eq(notifications.id, notificationId));
 }
+
+export async function getFileVersionsForComparison(fileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const versions = await db
+    .select({
+      id: fileVersions.id,
+      versionNumber: fileVersions.versionNumber,
+      fileKey: fileVersions.fileKey,
+      url: fileVersions.url,
+      size: fileVersions.size,
+      changeDescription: fileVersions.changeDescription,
+      uploadedBy: fileVersions.uploadedBy,
+      createdAt: fileVersions.createdAt,
+      uploaderName: users.name,
+      uploaderEmail: users.email,
+    })
+    .from(fileVersions)
+    .leftJoin(users, eq(fileVersions.uploadedBy, users.id))
+    .where(eq(fileVersions.fileId, fileId))
+    .orderBy(desc(fileVersions.versionNumber));
+
+  return versions;
+}
+
+export async function restoreFileVersion(fileId: number, versionId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get the version to restore
+  const versionToRestore = await db
+    .select()
+    .from(fileVersions)
+    .where(eq(fileVersions.id, versionId))
+    .limit(1);
+
+  if (versionToRestore.length === 0) return null;
+
+  const version = versionToRestore[0];
+
+  // Get current file info
+  const currentFile = await db
+    .select()
+    .from(files)
+    .where(eq(files.id, fileId))
+    .limit(1);
+
+  if (currentFile.length === 0) return null;
+
+  // Create a new version from current state before restoring
+  const currentVersionNumber = currentFile[0].currentVersion || 1;
+  await db.insert(fileVersions).values({
+    fileId,
+    versionNumber: currentVersionNumber,
+    fileKey: currentFile[0].fileKey,
+    url: currentFile[0].url,
+    size: currentFile[0].size,
+    changeDescription: `Backup before restoring version ${version.versionNumber}`,
+    uploadedBy: currentFile[0].uploadedBy,
+  });
+
+  // Update file with restored version
+  await db
+    .update(files)
+    .set({
+      fileKey: version.fileKey,
+      url: version.url,
+      size: version.size,
+      currentVersion: currentVersionNumber + 1,
+      updatedAt: new Date(),
+    })
+    .where(eq(files.id, fileId));
+
+  // Create new version entry for the restored version
+  await db.insert(fileVersions).values({
+    fileId,
+    versionNumber: currentVersionNumber + 1,
+    fileKey: version.fileKey,
+    url: version.url,
+    size: version.size,
+    changeDescription: `Restored from version ${version.versionNumber}`,
+    uploadedBy: userId,
+  });
+
+  return { success: true, newVersion: currentVersionNumber + 1 };
+}

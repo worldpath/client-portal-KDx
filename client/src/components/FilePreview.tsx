@@ -10,6 +10,7 @@ import FileComments from "@/components/FileComments";
 import { WorkflowManager } from "@/components/WorkflowManager";
 import { MultiReviewerManager } from "@/components/MultiReviewerManager";
 import FileActivityTimeline from "@/components/FileActivityTimeline";
+import FileVersionComparison from "@/components/FileVersionComparison";
 
 interface FilePreviewProps {
   fileId: number;
@@ -136,7 +137,7 @@ export default function FilePreview({
         </DialogHeader>
 
         <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="w-4 h-4 mr-2" />
@@ -149,6 +150,9 @@ export default function FilePreview({
             <TabsTrigger value="activity">
               <Clock className="w-4 h-4 mr-2" />
               Activity
+            </TabsTrigger>
+            <TabsTrigger value="versions">
+              Versions
             </TabsTrigger>
           </TabsList>
 
@@ -226,6 +230,10 @@ export default function FilePreview({
           
           <TabsContent value="activity" className="flex-1 overflow-auto mt-4">
             <FileActivityTimeline fileId={fileId} />
+          </TabsContent>
+          
+          <TabsContent value="versions" className="flex-1 overflow-auto mt-4">
+            <FileVersionComparison fileId={fileId} />
           </TabsContent>
         </Tabs>
 

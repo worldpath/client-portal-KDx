@@ -421,3 +421,17 @@
 - [x] Add visual indicator for snoozed notifications
 - [x] Update notification count to exclude snoozed items
 - [x] Test snooze expiration and automatic reappearance
+
+## File Version Comparison Tool
+- [x] Create getFileVersionsForComparison backend procedure
+- [x] Add version comparison endpoint to files router
+- [x] Build FileVersionComparison component
+- [x] Add version selector dropdowns (compare version A vs version B)
+- [x] Display side-by-side metadata comparison (size, upload date, uploader)
+- [x] Add file preview/viewer for both versions
+- [x] Highlight differences in metadata
+- [x] Add restore version functionality
+- [x] Add download specific version functionality
+- [x] Integrate comparison tool into FilePreview Versions tab
+- [x] Add Versions tab to file preview
+- [x] Test comparison with different file types

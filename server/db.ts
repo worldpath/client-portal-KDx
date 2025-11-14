@@ -10,7 +10,8 @@ import {
   auditLogs, InsertAuditLog,
   shareLinks, InsertShareLink,
   fileComments,
-  commentMentions
+  commentMentions,
+  fileReviewers
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1009,4 +1010,183 @@ export async function bulkUpdateWorkflowStatus(fileIds: number[], status: string
   await db.update(files)
     .set(updateData)
     .where(inArray(files.id, fileIds));
+}
+
+// ============================================================================
+// Multi-Reviewer Functions
+// ============================================================================
+
+export async function assignReviewers(fileId: number, reviewerIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Insert multiple reviewers
+  const reviewers = reviewerIds.map(reviewerId => ({
+    fileId,
+    reviewerId,
+    reviewStatus: "pending" as const,
+  }));
+  
+  await db.insert(fileReviewers).values(reviewers);
+}
+
+export async function removeReviewer(fileId: number, reviewerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(fileReviewers)
+    .where(and(
+      eq(fileReviewers.fileId, fileId),
+      eq(fileReviewers.reviewerId, reviewerId)
+    ));
+}
+
+export async function getFileReviewers(fileId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const reviewers = await db
+    .select({
+      id: fileReviewers.id,
+      reviewerId: fileReviewers.reviewerId,
+      reviewerName: users.name,
+      reviewerEmail: users.email,
+      reviewStatus: fileReviewers.reviewStatus,
+      reviewNotes: fileReviewers.reviewNotes,
+      assignedAt: fileReviewers.assignedAt,
+      reviewedAt: fileReviewers.reviewedAt,
+    })
+    .from(fileReviewers)
+    .leftJoin(users, eq(fileReviewers.reviewerId, users.id))
+    .where(eq(fileReviewers.fileId, fileId))
+    .orderBy(fileReviewers.assignedAt);
+  
+  return reviewers;
+}
+
+export async function approveFileByReviewer(fileId: number, reviewerId: number, notes?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Update reviewer status
+  await db.update(fileReviewers)
+    .set({
+      reviewStatus: "approved",
+      reviewNotes: notes || null,
+      reviewedAt: new Date(),
+    })
+    .where(and(
+      eq(fileReviewers.fileId, fileId),
+      eq(fileReviewers.reviewerId, reviewerId)
+    ));
+  
+  // Check if overall approval requirement is met
+  await updateOverallApprovalStatus(fileId);
+}
+
+export async function rejectFileByReviewer(fileId: number, reviewerId: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Update reviewer status
+  await db.update(fileReviewers)
+    .set({
+      reviewStatus: "rejected",
+      reviewNotes: reason,
+      reviewedAt: new Date(),
+    })
+    .where(and(
+      eq(fileReviewers.fileId, fileId),
+      eq(fileReviewers.reviewerId, reviewerId)
+    ));
+  
+  // Update file status to rejected (any rejection fails the approval)
+  await db.update(files)
+    .set({
+      workflowStatus: "rejected",
+      reviewNotes: reason,
+      reviewedAt: new Date(),
+    })
+    .where(eq(files.id, fileId));
+}
+
+async function updateOverallApprovalStatus(fileId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get file approval requirement
+  const [file] = await db.select().from(files).where(eq(files.id, fileId)).limit(1);
+  if (!file) return;
+  
+  // Get all reviewers
+  const reviewers = await db.select().from(fileReviewers).where(eq(fileReviewers.fileId, fileId));
+  
+  if (reviewers.length === 0) return;
+  
+  const approvedCount = reviewers.filter(r => r.reviewStatus === "approved").length;
+  const totalCount = reviewers.length;
+  const rejectedCount = reviewers.filter(r => r.reviewStatus === "rejected").length;
+  
+  // If any rejection, file is rejected (handled in rejectFileByReviewer)
+  if (rejectedCount > 0) return;
+  
+  let shouldApprove = false;
+  
+  switch (file.approvalRequirement) {
+    case "all_must_approve":
+      shouldApprove = approvedCount === totalCount;
+      break;
+    case "majority_must_approve":
+      shouldApprove = approvedCount > totalCount / 2;
+      break;
+    case "any_can_approve":
+      shouldApprove = approvedCount > 0;
+      break;
+  }
+  
+  if (shouldApprove) {
+    await db.update(files)
+      .set({
+        workflowStatus: "approved",
+        reviewedAt: new Date(),
+      })
+      .where(eq(files.id, fileId));
+  }
+}
+
+export async function getPendingReviewsForReviewer(reviewerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const pendingReviews = await db
+    .select({
+      fileId: files.id,
+      fileName: files.name,
+      fileUrl: files.url,
+      folderId: files.folderId,
+      uploadedBy: files.uploadedBy,
+      uploaderName: users.name,
+      assignedAt: fileReviewers.assignedAt,
+      approvalRequirement: files.approvalRequirement,
+    })
+    .from(fileReviewers)
+    .leftJoin(files, eq(fileReviewers.fileId, files.id))
+    .leftJoin(users, eq(files.uploadedBy, users.id))
+    .where(and(
+      eq(fileReviewers.reviewerId, reviewerId),
+      eq(fileReviewers.reviewStatus, "pending"),
+      eq(files.workflowStatus, "under_review")
+    ))
+    .orderBy(desc(fileReviewers.assignedAt));
+  
+  return pendingReviews;
+}
+
+export async function updateFileApprovalRequirement(fileId: number, requirement: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(files)
+    .set({ approvalRequirement: requirement as any })
+    .where(eq(files.id, fileId));
 }

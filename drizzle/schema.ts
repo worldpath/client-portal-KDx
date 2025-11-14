@@ -71,9 +71,10 @@ export const files = mysqlTable("files", {
   uploadedBy: int("uploadedBy").notNull(),
   currentVersion: int("currentVersion").default(1).notNull(), // Current version number
   workflowStatus: mysqlEnum("workflowStatus", ["draft", "under_review", "approved", "rejected"]).default("draft").notNull(),
-  reviewerId: int("reviewerId"), // User assigned to review
-  reviewedAt: timestamp("reviewedAt"), // When approved/rejected
-  reviewNotes: text("reviewNotes"), // Approval/rejection notes
+  reviewerId: int("reviewerId"), // Legacy single reviewer (kept for backward compatibility)
+  reviewNotes: text("reviewNotes"), // Legacy review notes
+  reviewedAt: timestamp("reviewedAt"), // When review was completed
+  approvalRequirement: mysqlEnum("approvalRequirement", ["all_must_approve", "majority_must_approve", "any_can_approve"]).default("all_must_approve").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -214,3 +215,24 @@ export const commentMentions = mysqlTable("comment_mentions", {
 
 export type CommentMention = typeof commentMentions.$inferSelect;
 export type InsertCommentMention = typeof commentMentions.$inferInsert;
+
+/**
+ * File reviewers table for multi-reviewer approval workflows
+ */
+export const fileReviewers = mysqlTable("file_reviewers", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(),
+  reviewerId: int("reviewerId").notNull(), // User assigned as reviewer
+  reviewStatus: mysqlEnum("reviewStatus", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  reviewNotes: text("reviewNotes"), // Reviewer's specific notes
+  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewedAt"), // When review was completed
+}, (table) => ({
+  fileIdx: index("file_idx").on(table.fileId),
+  reviewerIdx: index("reviewer_idx").on(table.reviewerId),
+  statusIdx: index("status_idx").on(table.reviewStatus),
+  uniqueFileReviewer: index("unique_file_reviewer").on(table.fileId, table.reviewerId),
+}));
+
+export type FileReviewer = typeof fileReviewers.$inferSelect;
+export type InsertFileReviewer = typeof fileReviewers.$inferInsert;

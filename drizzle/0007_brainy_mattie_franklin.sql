@@ -1,0 +1,1 @@
+ALTER TABLE `files` ADD `approvalRequirement` enum('all_must_approve','majority_must_approve','any_can_approve') DEFAULT 'all_must_approve' NOT NULL;

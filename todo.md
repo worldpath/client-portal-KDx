@@ -239,3 +239,22 @@
 - [ ] Add workflow notifications (email alerts)
 - [x] Test workflow transitions
 - [x] Test reviewer permissions
+
+## Multi-Reviewer Approval System
+- [x] Add file_reviewers table for many-to-many relationship
+- [x] Add review_status field (pending, approved, rejected) per reviewer
+- [x] Add approval_requirement field to files (all_must_approve, majority_must_approve, any_can_approve)
+- [x] Backend: Assign multiple reviewers to file
+- [x] Backend: Remove reviewer from file
+- [x] Backend: Get all reviewers for a file with their status
+- [x] Backend: Approve file by specific reviewer
+- [x] Backend: Reject file by specific reviewer
+- [x] Backend: Calculate overall approval status based on requirement
+- [x] Backend: Get pending reviews for a reviewer
+- [x] Frontend: Multi-select reviewer assignment UI
+- [x] Frontend: Display all reviewers with status indicators
+- [x] Frontend: Show reviewer-specific approval/rejection notes
+- [x] Frontend: Configure approval requirement (all/majority/any)
+- [x] Frontend: Pending reviews widget for reviewers
+- [x] Test multi-reviewer workflows
+- [x] Test approval requirement logic

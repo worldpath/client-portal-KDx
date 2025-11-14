@@ -8,6 +8,7 @@ import { Loader2, Edit, Save, X, MessageSquare, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 import FileComments from "@/components/FileComments";
 import { WorkflowManager } from "@/components/WorkflowManager";
+import { MultiReviewerManager } from "@/components/MultiReviewerManager";
 
 interface FilePreviewProps {
   fileId: number;
@@ -18,6 +19,7 @@ interface FilePreviewProps {
   reviewerId?: number | null;
   reviewNotes?: string | null;
   uploadedBy?: number;
+  approvalRequirement?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isAdmin: boolean;
@@ -33,6 +35,7 @@ export default function FilePreview({
   reviewerId,
   reviewNotes,
   uploadedBy,
+  approvalRequirement = "all_must_approve",
   open,
   onOpenChange,
   isAdmin,
@@ -190,17 +193,30 @@ export default function FilePreview({
           </TabsContent>
 
           <TabsContent value="workflow" className="flex-1 overflow-auto mt-4">
-            {workflowStatus && uploadedBy !== undefined && (
-              <WorkflowManager
+            <div className="space-y-6">
+              {/* Multi-Reviewer Section */}
+              <MultiReviewerManager
                 fileId={fileId}
                 fileName={fileName}
-                currentStatus={workflowStatus}
-                reviewerId={reviewerId}
-                reviewNotes={reviewNotes}
-                uploadedBy={uploadedBy}
-                onStatusChange={onWorkflowChange}
+                approvalRequirement={approvalRequirement}
+                onUpdate={onWorkflowChange}
               />
-            )}
+              
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Legacy Workflow</h3>
+                {workflowStatus && uploadedBy !== undefined && (
+                  <WorkflowManager
+                    fileId={fileId}
+                    fileName={fileName}
+                    currentStatus={workflowStatus}
+                    reviewerId={reviewerId}
+                    reviewNotes={reviewNotes}
+                    uploadedBy={uploadedBy}
+                    onStatusChange={onWorkflowChange}
+                  />
+                )}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 

@@ -1230,6 +1230,120 @@ export const appRouter = router({
         
         return { success: true };
       }),
+    
+    // Multi-reviewer procedures
+    assignReviewers: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        reviewerIds: z.array(z.number()),
+        approvalRequirement: z.enum(["all_must_approve", "majority_must_approve", "any_can_approve"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Only file owner or admin can assign reviewers
+        if (file.uploadedBy !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only file owner can assign reviewers' });
+        }
+        
+        await db.assignReviewers(input.fileId, input.reviewerIds);
+        
+        // Update approval requirement if provided
+        if (input.approvalRequirement) {
+          await db.updateFileApprovalRequirement(input.fileId, input.approvalRequirement);
+        }
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'assign_reviewers',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Assigned ${input.reviewerIds.length} reviewers`,
+        });
+        
+        return { success: true };
+      }),
+    
+    removeReviewer: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        reviewerId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+        
+        // Only file owner or admin can remove reviewers
+        if (file.uploadedBy !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only file owner can remove reviewers' });
+        }
+        
+        await db.removeReviewer(input.fileId, input.reviewerId);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'remove_reviewer',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: `Removed reviewer ${input.reviewerId}`,
+        });
+        
+        return { success: true };
+      }),
+    
+    getFileReviewers: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getFileReviewers(input.fileId);
+      }),
+    
+    approveByReviewer: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.approveFileByReviewer(input.fileId, ctx.user.id, input.notes);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'approve_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: input.notes || 'File approved',
+        });
+        
+        return { success: true };
+      }),
+    
+    rejectByReviewer: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        reason: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.rejectFileByReviewer(input.fileId, ctx.user.id, input.reason);
+        
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: 'reject_file',
+          entityType: 'file',
+          entityId: input.fileId,
+          details: input.reason,
+        });
+        
+        return { success: true };
+      }),
+    
+    myPendingReviews: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getPendingReviewsForReviewer(ctx.user.id);
+      }),
   }),
 
   // ============ AUDIT LOGS ============

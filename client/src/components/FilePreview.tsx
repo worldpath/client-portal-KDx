@@ -11,6 +11,7 @@ import { WorkflowManager } from "@/components/WorkflowManager";
 import { MultiReviewerManager } from "@/components/MultiReviewerManager";
 import FileActivityTimeline from "@/components/FileActivityTimeline";
 import FileVersionComparison from "@/components/FileVersionComparison";
+import FileWorkflowTimeline from "@/components/FileWorkflowTimeline";
 
 interface FilePreviewProps {
   fileId: number;
@@ -203,13 +204,22 @@ export default function FilePreview({
 
           <TabsContent value="workflow" className="flex-1 overflow-auto mt-4">
             <div className="space-y-6">
+              {/* Multi-Stage Workflow Timeline */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Multi-Stage Workflow</h3>
+                <FileWorkflowTimeline fileId={fileId} />
+              </div>
+
               {/* Multi-Reviewer Section */}
-              <MultiReviewerManager
-                fileId={fileId}
-                fileName={fileName}
-                approvalRequirement={approvalRequirement}
-                onUpdate={onWorkflowChange}
-              />
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Multi-Reviewer Approval</h3>
+                <MultiReviewerManager
+                  fileId={fileId}
+                  fileName={fileName}
+                  approvalRequirement={approvalRequirement}
+                  onUpdate={onWorkflowChange}
+                />
+              </div>
               
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Legacy Workflow</h3>

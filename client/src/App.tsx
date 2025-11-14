@@ -12,6 +12,7 @@ import SharedFile from "./pages/SharedFile";
 import Settings from "./pages/Settings";
 import ExpiredFiles from "./pages/ExpiredFiles";
 import ArchivedFiles from "./pages/ArchivedFiles";
+import WorkflowTemplateManager from "./pages/WorkflowTemplateManager";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/settings"} component={Settings} />
       <Route path={"/expired-files"} component={ExpiredFiles} />
       <Route path={"/archived-files"} component={ArchivedFiles} />
+      <Route path={"/workflow-templates"} component={WorkflowTemplateManager} />
       <Route path={"/search/:query"} component={SearchResults} />
       <Route path={"/search"} component={SearchResults} />
       <Route path={"/share/:token"} component={SharedFile} />

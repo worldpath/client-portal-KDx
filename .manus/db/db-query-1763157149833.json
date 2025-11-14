@@ -1,0 +1,9 @@
+{
+  "query": "\nINSERT INTO workflow_stages (workflowTemplateId, stageName, stageOrder, requiredApprovals) VALUES\n(2, 'Technical Review', 1, 1),\n(2, 'Quality Review', 2, 1),\n(2, 'Executive Approval', 3, 1);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2GpZZMEMLJRYwoF.df397a06bfee --database mjZVxemZ6ZQeQWjyGiSsyb --execute \nINSERT INTO workflow_stages (workflowTemplateId, stageName, stageOrder, requiredApprovals) VALUES\n(2, 'Technical Review', 1, 1),\n(2, 'Quality Review', 2, 1),\n(2, 'Executive Approval', 3, 1);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 52
+}

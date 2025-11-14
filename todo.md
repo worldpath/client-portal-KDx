@@ -503,3 +503,31 @@
 - [x] Automatically create workflow instance after file upload
 - [x] Show workflow assignment confirmation in upload success message
 - [x] Test workflow assignment during upload
+
+## Workflow Timeline Visualization
+- [x] Create FileWorkflowTimeline component
+- [x] Fetch workflow progress data for file
+- [x] Display workflow stages in chronological order
+- [x] Highlight current stage with distinct styling
+- [x] Show completed stages with checkmarks
+- [x] Show pending stages with muted styling
+- [x] Display assigned reviewers for each stage
+- [x] Add approve button for current stage (if user is assigned reviewer)
+- [x] Add reject button with reason input for current stage
+- [x] Show approval/rejection status and timestamps
+- [x] Integrate timeline into FilePreview Workflow tab
+- [x] Test timeline with multi-stage workflows
+
+## Workflow Template Management
+- [x] Create sample workflow templates in database (Standard Review, FDA Submission, Compliance Check)
+- [x] Build WorkflowTemplateManager admin page component
+- [x] Add template list view with cards
+- [x] Add create new template dialog
+- [x] Add edit template dialog
+- [x] Add delete template confirmation
+- [x] Add stage management UI (add, edit, reorder, delete stages)
+- [x] Add workflow templates route to App.tsx
+- [x] Add workflow templates navigation item to admin sidebar
+- [x] Test template CRUD operations
+- [x] Test stage management
+- [x] Test complete workflow lifecycle with sample templates

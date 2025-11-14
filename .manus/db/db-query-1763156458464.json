@@ -1,0 +1,9 @@
+{
+  "query": "SELECT * FROM workflow_templates LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2GpZZMEMLJRYwoF.df397a06bfee --database mjZVxemZ6ZQeQWjyGiSsyb --execute SELECT * FROM workflow_templates LIMIT 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 372
+}

@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search } from "lucide-react";
+import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search, GitBranch } from "lucide-react";
 import { APP_TITLE } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -14,7 +14,7 @@ import AuditLogViewer from "@/components/AuditLogViewer";
 import PendingApprovalsWidget from "@/components/PendingApprovalsWidget";
 import ReviewerWorkloadWidget from "@/components/ReviewerWorkloadWidget";
 
-type Tab = "files" | "users" | "audit";
+type Tab = "files" | "users" | "audit" | "workflows";
 
 export default function AdminDashboard() {
   const { user, loading, logout } = useAuth();
@@ -128,6 +128,14 @@ export default function AdminDashboard() {
               <Activity className="w-4 h-4" />
               Audit Logs
             </Button>
+            <Button
+              variant={activeTab === "workflows" ? "secondary" : "ghost"}
+              className="gap-2"
+              onClick={() => setActiveTab("workflows")}
+            >
+              <GitBranch className="w-4 h-4" />
+              Workflow Templates
+            </Button>
           </nav>
         </div>
       </div>
@@ -145,6 +153,32 @@ export default function AdminDashboard() {
         )}
         {activeTab === "users" && <UserManagement />}
         {activeTab === "audit" && <AuditLogViewer />}
+        {activeTab === "workflows" && (
+          <div className="max-w-6xl mx-auto">
+            <Button
+              variant="outline"
+              onClick={() => setLocation('/workflow-templates')}
+              className="mb-6"
+            >
+              <GitBranch className="w-4 h-4 mr-2" />
+              Manage Workflow Templates
+            </Button>
+            <Card>
+              <CardHeader>
+                <CardTitle>Workflow Templates</CardTitle>
+                <CardDescription>
+                  Multi-stage approval workflows are now available. Click the button above to create and manage workflow templates.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Workflow templates allow you to define custom multi-stage approval processes for regulatory documents.
+                  Each workflow can have multiple stages with different reviewers and approval requirements.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

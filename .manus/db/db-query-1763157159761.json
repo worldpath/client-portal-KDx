@@ -1,0 +1,28 @@
+{
+  "query": "\nSELECT wt.id, wt.name, wt.description, COUNT(ws.id) as stage_count\nFROM workflow_templates wt\nLEFT JOIN workflow_stages ws ON wt.id = ws.workflowTemplateId\nGROUP BY wt.id, wt.name, wt.description\nORDER BY wt.id;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2GpZZMEMLJRYwoF.df397a06bfee --database mjZVxemZ6ZQeQWjyGiSsyb --execute \nSELECT wt.id, wt.name, wt.description, COUNT(ws.id) as stage_count\nFROM workflow_templates wt\nLEFT JOIN workflow_stages ws ON wt.id = ws.workflowTemplateId\nGROUP BY wt.id, wt.name, wt.description\nORDER BY wt.id;\n",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Standard Document Review",
+      "description": "Two-stage review process for standard regulatory documents",
+      "stage_count": "2"
+    },
+    {
+      "id": "2",
+      "name": "FDA Submission Workflow",
+      "description": "Three-stage approval process for FDA regulatory submissions",
+      "stage_count": "3"
+    },
+    {
+      "id": "3",
+      "name": "Regulatory Compliance Check",
+      "description": "Four-stage comprehensive compliance verification process",
+      "stage_count": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tdescription\tstage_count\n1\tStandard Document Review\tTwo-stage review process for standard regulatory documents\t2\n2\tFDA Submission Workflow\tThree-stage approval process for FDA regulatory submissions\t3\n3\tRegulatory Compliance Check\tFour-stage comprehensive compliance verification process\t4\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}

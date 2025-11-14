@@ -456,23 +456,27 @@
 - [ ] Integrate expiration management into admin dashboard
 
 ## Custom Multi-Stage Approval Workflows
-- [ ] Create workflow_templates table
-- [ ] Create workflow_stages table
-- [ ] Create file_workflow_instances table
-- [ ] Create file_workflow_stage_progress table
-- [ ] Add getWorkflowTemplates backend procedure
-- [ ] Add createWorkflowTemplate backend procedure
+- [x] Create workflow_templates table (id, name, description, isActive, createdBy, createdAt)
+- [x] Create workflow_stages table (id, workflowTemplateId, stageName, stageOrder, requiredApprovals, createdAt)
+- [x] Create file_workflow_instances table (id, fileId, workflowTemplateId, currentStageId, status, startedAt, completedAt)
+- [x] Create file_workflow_stage_progress table (id, workflowInstanceId, stageId, status, assignedReviewers, approvedBy, rejectedBy, startedAt, completedAt)
+- [x] Add getWorkflowTemplates backend procedure
+- [x] Add getWorkflowTemplateById backend procedure
+- [x] Add createWorkflowTemplate backend procedure (with stages)
 - [ ] Add updateWorkflowTemplate backend procedure
 - [ ] Add deleteWorkflowTemplate backend procedure
-- [ ] Add assignWorkflowToFile backend procedure
-- [ ] Add advanceWorkflowStage backend procedure
-- [ ] Create WorkflowTemplateManager component
-- [ ] Create WorkflowStageEditor component
-- [ ] Create FileWorkflowProgress component
-- [ ] Add visual workflow progress indicator
-- [ ] Add stage-specific reviewer assignments
-- [ ] Add stage-specific approval requirements
-- [ ] Integrate workflow templates into file submission
+- [x] Add assignWorkflowToFile backend procedure
+- [x] Add getFileWorkflowProgress backend procedure
+- [x] Add approveWorkflowStage backend procedure
+- [x] Add rejectWorkflowStage backend procedure
+- [x] Add advanceToNextStage backend procedure
+- [ ] Create WorkflowTemplateManager page component
+- [ ] Create WorkflowTemplateForm component for create/edit
+- [ ] Create WorkflowStageEditor component with drag-and-drop ordering
+- [ ] Create FileWorkflowProgress component with visual timeline
+- [ ] Add workflow assignment dialog to file upload/submission
+- [ ] Add workflow progress widget to file preview
+- [ ] Integrate workflow approval into reviewer dashboard
 - [ ] Add workflow template selection to admin settings
 
 ## Batch File Operations

@@ -2070,6 +2070,83 @@ export const appRouter = router({
         return { successCount, failureCount, total: input.fileIds.length };
       }),
   }),
+
+  // ============ WORKFLOW MANAGEMENT ============
+  workflows: router({
+    getTemplates: protectedProcedure.query(async () => {
+      return await db.getWorkflowTemplates();
+    }),
+
+    getTemplateById: protectedProcedure
+      .input(z.object({ templateId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWorkflowTemplateById(input.templateId);
+      }),
+
+    createTemplate: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().nullable(),
+        stages: z.array(z.object({
+          stageName: z.string(),
+          stageOrder: z.number(),
+          requiredApprovals: z.number(),
+        })),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const templateId = await db.createWorkflowTemplate(
+          input.name,
+          input.description,
+          ctx.user.id,
+          input.stages
+        );
+        return { templateId };
+      }),
+
+    assignToFile: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        workflowTemplateId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const instanceId = await db.assignWorkflowToFile(input.fileId, input.workflowTemplateId);
+        return { instanceId };
+      }),
+
+    getFileProgress: protectedProcedure
+      .input(z.object({ fileId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getFileWorkflowProgress(input.fileId);
+      }),
+
+    approveStage: protectedProcedure
+      .input(z.object({
+        workflowInstanceId: z.number(),
+        stageId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.approveWorkflowStage(
+          input.workflowInstanceId,
+          input.stageId,
+          ctx.user.id
+        );
+      }),
+
+    rejectStage: protectedProcedure
+      .input(z.object({
+        workflowInstanceId: z.number(),
+        stageId: z.number(),
+        reason: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.rejectWorkflowStage(
+          input.workflowInstanceId,
+          input.stageId,
+          ctx.user.id,
+          input.reason
+        );
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

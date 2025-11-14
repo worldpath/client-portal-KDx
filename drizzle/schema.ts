@@ -299,3 +299,56 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ============ WORKFLOW TEMPLATES ============
+
+export const workflowTemplates = mysqlTable("workflow_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  isActive: int("isActive").default(1).notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const workflowStages = mysqlTable("workflow_stages", {
+  id: int("id").autoincrement().primaryKey(),
+  workflowTemplateId: int("workflowTemplateId").notNull(),
+  stageName: varchar("stageName", { length: 255 }).notNull(),
+  stageOrder: int("stageOrder").notNull(),
+  requiredApprovals: int("requiredApprovals").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const fileWorkflowInstances = mysqlTable("file_workflow_instances", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(),
+  workflowTemplateId: int("workflowTemplateId").notNull(),
+  currentStageId: int("currentStageId"),
+  status: mysqlEnum("status", ["in_progress", "completed", "rejected"]).default("in_progress").notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+
+export const fileWorkflowStageProgress = mysqlTable("file_workflow_stage_progress", {
+  id: int("id").autoincrement().primaryKey(),
+  workflowInstanceId: int("workflowInstanceId").notNull(),
+  stageId: int("stageId").notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "approved", "rejected"]).default("pending").notNull(),
+  assignedReviewers: text("assignedReviewers"), // JSON array of reviewer IDs
+  approvedBy: text("approvedBy"), // JSON array of reviewer IDs who approved
+  rejectedBy: int("rejectedBy"), // Reviewer ID who rejected
+  rejectionReason: text("rejectionReason"),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+});
+
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type InsertWorkflowTemplate = typeof workflowTemplates.$inferInsert;
+export type WorkflowStage = typeof workflowStages.$inferSelect;
+export type InsertWorkflowStage = typeof workflowStages.$inferInsert;
+export type FileWorkflowInstance = typeof fileWorkflowInstances.$inferSelect;
+export type InsertFileWorkflowInstance = typeof fileWorkflowInstances.$inferInsert;
+export type FileWorkflowStageProgress = typeof fileWorkflowStageProgress.$inferSelect;
+export type InsertFileWorkflowStageProgress = typeof fileWorkflowStageProgress.$inferInsert;

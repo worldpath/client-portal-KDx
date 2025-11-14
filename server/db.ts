@@ -13,7 +13,11 @@ import {
   commentMentions,
   fileReviewers,
   notificationPreferences, InsertNotificationPreference,
-  notifications, InsertNotification
+  notifications, InsertNotification,
+  workflowTemplates,
+  workflowStages,
+  fileWorkflowInstances,
+  fileWorkflowStageProgress
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1791,6 +1795,302 @@ export async function moveFileToFolder(fileId: number, targetFolderId: number) {
     .update(files)
     .set({ folderId: targetFolderId, updatedAt: new Date() })
     .where(eq(files.id, fileId));
+
+  return { success: true };
+}
+
+// ============ WORKFLOW MANAGEMENT ============
+
+export async function getWorkflowTemplates() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const templates = await db.select().from(workflowTemplates).where(eq(workflowTemplates.isActive, 1));
+  
+  // Get stages for each template
+  const templatesWithStages = await Promise.all(
+    templates.map(async (template) => {
+      const stages = await db
+        .select()
+        .from(workflowStages)
+        .where(eq(workflowStages.workflowTemplateId, template.id))
+        .orderBy(workflowStages.stageOrder);
+      
+      return { ...template, stages };
+    })
+  );
+
+  return templatesWithStages;
+}
+
+export async function getWorkflowTemplateById(templateId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const template = await db
+    .select()
+    .from(workflowTemplates)
+    .where(eq(workflowTemplates.id, templateId))
+    .limit(1);
+
+  if (template.length === 0) return null;
+
+  const stages = await db
+    .select()
+    .from(workflowStages)
+    .where(eq(workflowStages.workflowTemplateId, templateId))
+    .orderBy(workflowStages.stageOrder);
+
+  return { ...template[0], stages };
+}
+
+export async function createWorkflowTemplate(
+  name: string,
+  description: string | null,
+  createdBy: number,
+  stages: Array<{ stageName: string; stageOrder: number; requiredApprovals: number }>
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Insert template
+  const result = await db.insert(workflowTemplates).values({
+    name,
+    description,
+    createdBy,
+  });
+
+  const templateId = Number((result as any).insertId);
+
+  // Insert stages
+  if (stages.length > 0) {
+    await db.insert(workflowStages).values(
+      stages.map((stage) => ({
+        workflowTemplateId: templateId,
+        stageName: stage.stageName,
+        stageOrder: stage.stageOrder,
+        requiredApprovals: stage.requiredApprovals,
+      }))
+    );
+  }
+
+  return templateId;
+}
+
+export async function assignWorkflowToFile(fileId: number, workflowTemplateId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get workflow stages
+  const stages = await db
+    .select()
+    .from(workflowStages)
+    .where(eq(workflowStages.workflowTemplateId, workflowTemplateId))
+    .orderBy(workflowStages.stageOrder);
+
+  if (stages.length === 0) return null;
+
+  // Create workflow instance
+  const instanceResult = await db.insert(fileWorkflowInstances).values({
+    fileId,
+    workflowTemplateId,
+    currentStageId: stages[0].id,
+    status: "in_progress",
+  });
+
+  const instanceId = Number((instanceResult as any).insertId);
+
+  // Create progress records for all stages
+  await db.insert(fileWorkflowStageProgress).values(
+    stages.map((stage, index) => ({
+      workflowInstanceId: instanceId,
+      stageId: stage.id,
+      status: index === 0 ? ("in_progress" as const) : ("pending" as const),
+      startedAt: index === 0 ? new Date() : null,
+    }))
+  );
+
+  return instanceId;
+}
+
+export async function getFileWorkflowProgress(fileId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const instance = await db
+    .select()
+    .from(fileWorkflowInstances)
+    .where(eq(fileWorkflowInstances.fileId, fileId))
+    .limit(1);
+
+  if (instance.length === 0) return null;
+
+  const progress = await db
+    .select()
+    .from(fileWorkflowStageProgress)
+    .where(eq(fileWorkflowStageProgress.workflowInstanceId, instance[0].id));
+
+  const stageIds = progress.map((p) => p.stageId);
+  const stagesData = await db
+    .select()
+    .from(workflowStages)
+    .where(inArray(workflowStages.id, stageIds));
+
+  const progressWithStages = progress.map((p) => ({
+    ...p,
+    stage: stagesData.find((s) => s.id === p.stageId),
+  }));
+
+  return {
+    instance: instance[0],
+    progress: progressWithStages.sort((a, b) => (a.stage?.stageOrder || 0) - (b.stage?.stageOrder || 0)),
+  };
+}
+
+export async function approveWorkflowStage(
+  workflowInstanceId: number,
+  stageId: number,
+  reviewerId: number
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get current progress
+  const progress = await db
+    .select()
+    .from(fileWorkflowStageProgress)
+    .where(
+      and(
+        eq(fileWorkflowStageProgress.workflowInstanceId, workflowInstanceId),
+        eq(fileWorkflowStageProgress.stageId, stageId)
+      )
+    )
+    .limit(1);
+
+  if (progress.length === 0) return null;
+
+  const currentProgress = progress[0];
+  const approvedBy = currentProgress.approvedBy ? JSON.parse(currentProgress.approvedBy) : [];
+  approvedBy.push(reviewerId);
+
+  // Get stage info
+  const stage = await db
+    .select()
+    .from(workflowStages)
+    .where(eq(workflowStages.id, stageId))
+    .limit(1);
+
+  if (stage.length === 0) return null;
+
+  const requiredApprovals = stage[0].requiredApprovals;
+  const isStageComplete = approvedBy.length >= requiredApprovals;
+
+  // Update progress
+  await db
+    .update(fileWorkflowStageProgress)
+    .set({
+      approvedBy: JSON.stringify(approvedBy),
+      status: isStageComplete ? "approved" : "in_progress",
+      completedAt: isStageComplete ? new Date() : null,
+    })
+    .where(eq(fileWorkflowStageProgress.id, currentProgress.id));
+
+  // If stage is complete, advance to next stage
+  if (isStageComplete) {
+    await advanceToNextStage(workflowInstanceId, stageId);
+  }
+
+  return { success: true, stageComplete: isStageComplete };
+}
+
+export async function rejectWorkflowStage(
+  workflowInstanceId: number,
+  stageId: number,
+  reviewerId: number,
+  reason: string
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Update progress
+  await db
+    .update(fileWorkflowStageProgress)
+    .set({
+      status: "rejected",
+      rejectedBy: reviewerId,
+      rejectionReason: reason,
+      completedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(fileWorkflowStageProgress.workflowInstanceId, workflowInstanceId),
+        eq(fileWorkflowStageProgress.stageId, stageId)
+      )
+    );
+
+  // Update workflow instance
+  await db
+    .update(fileWorkflowInstances)
+    .set({
+      status: "rejected",
+      completedAt: new Date(),
+    })
+    .where(eq(fileWorkflowInstances.id, workflowInstanceId));
+
+  return { success: true };
+}
+
+async function advanceToNextStage(workflowInstanceId: number, currentStageId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get all stages for this workflow instance
+  const instance = await db
+    .select()
+    .from(fileWorkflowInstances)
+    .where(eq(fileWorkflowInstances.id, workflowInstanceId))
+    .limit(1);
+
+  if (instance.length === 0) return null;
+
+  const allStages = await db
+    .select()
+    .from(workflowStages)
+    .where(eq(workflowStages.workflowTemplateId, instance[0].workflowTemplateId))
+    .orderBy(workflowStages.stageOrder);
+
+  const currentStageIndex = allStages.findIndex((s) => s.id === currentStageId);
+  const nextStage = allStages[currentStageIndex + 1];
+
+  if (nextStage) {
+    // Move to next stage
+    await db
+      .update(fileWorkflowInstances)
+      .set({ currentStageId: nextStage.id })
+      .where(eq(fileWorkflowInstances.id, workflowInstanceId));
+
+    await db
+      .update(fileWorkflowStageProgress)
+      .set({
+        status: "in_progress",
+        startedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(fileWorkflowStageProgress.workflowInstanceId, workflowInstanceId),
+          eq(fileWorkflowStageProgress.stageId, nextStage.id)
+        )
+      );
+  } else {
+    // Workflow complete
+    await db
+      .update(fileWorkflowInstances)
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+      })
+      .where(eq(fileWorkflowInstances.id, workflowInstanceId));
+  }
 
   return { success: true };
 }

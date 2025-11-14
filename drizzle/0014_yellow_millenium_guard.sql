@@ -1,0 +1,1 @@
+ALTER TABLE `workflow_templates` MODIFY COLUMN `isActive` int NOT NULL DEFAULT 1;

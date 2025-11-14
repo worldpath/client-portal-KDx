@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, Check, X, Loader2, Link as LinkIcon, Clock, Lock } from "lucide-react";
+import { Copy, Check, X, Loader2, Link as LinkIcon, Clock, Lock, Mail, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ShareDialogProps {
   fileId: number;
@@ -28,6 +29,9 @@ interface ShareDialogProps {
 }
 
 export default function ShareDialog({ fileId, fileName, open, onOpenChange }: ShareDialogProps) {
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [message, setMessage] = useState("");
   const [password, setPassword] = useState("");
   const [expiresIn, setExpiresIn] = useState<string>("168"); // 7 days default
   const [maxDownloads, setMaxDownloads] = useState<string>("");
@@ -69,6 +73,9 @@ export default function ShareDialog({ fileId, fileName, open, onOpenChange }: Sh
   const handleCreateShare = () => {
     createShareMutation.mutate({
       fileId,
+      recipientEmail: recipientEmail || undefined,
+      recipientName: recipientName || undefined,
+      message: message || undefined,
       password: password || undefined,
       expiresIn: expiresIn ? parseInt(expiresIn) : undefined,
       maxDownloads: maxDownloads ? parseInt(maxDownloads) : undefined,
@@ -111,6 +118,53 @@ export default function ShareDialog({ fileId, fileName, open, onOpenChange }: Sh
             <h3 className="text-sm font-semibold text-foreground">Create New Share Link</h3>
             
             <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="recipientEmail" className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Recipient Email (Optional)
+                </Label>
+                <Input
+                  id="recipientEmail"
+                  type="email"
+                  placeholder="recipient@example.com"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If provided, an email with the share link will be sent automatically
+                </p>
+              </div>
+
+              {recipientEmail && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="recipientName">
+                      Recipient Name (Optional)
+                    </Label>
+                    <Input
+                      id="recipientName"
+                      type="text"
+                      placeholder="John Doe"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="message" className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Personal Message (Optional)
+                    </Label>
+                    <Textarea
+                      id="message"
+                      placeholder="Add a personal message to include in the email..."
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="password" className="flex items-center gap-2">
                   <Lock className="w-4 h-4" />

@@ -287,3 +287,15 @@
 - [ ] Add notification history view in user settings
 - [ ] Test email delivery for all notification types
 - [ ] Add unsubscribe functionality
+
+## Enhanced Share Link Email Notifications
+- [x] Add recipientEmail field to share_links table
+- [x] Add recipientName field to share_links table
+- [x] Add message field to share_links table for personal notes
+- [x] Update createShareLink backend to accept recipient info
+- [x] Update share link creation UI to collect recipient email
+- [x] Add optional message field to share dialog
+- [x] Integrate sendShareLinkNotification into share creation
+- [x] Test email delivery with password-protected links
+- [x] Test email delivery with expiration dates
+- [x] Test email delivery with custom messages

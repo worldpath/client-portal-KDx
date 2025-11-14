@@ -724,6 +724,9 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         fileId: z.number(),
+        recipientEmail: z.string().email().optional(),
+        recipientName: z.string().optional(),
+        message: z.string().optional(),
         password: z.string().optional(),
         expiresIn: z.number().optional(), // Hours until expiration
         maxDownloads: z.number().optional(),
@@ -765,6 +768,9 @@ export const appRouter = router({
           fileId: input.fileId,
           token,
           createdBy: ctx.user.id,
+          recipientEmail: input.recipientEmail,
+          recipientName: input.recipientName,
+          message: input.message,
           password: hashedPassword,
           expiresAt,
           maxDownloads: input.maxDownloads,
@@ -776,9 +782,31 @@ export const appRouter = router({
           'create_share_link',
           'file',
           input.fileId,
-          { token, expiresAt, maxDownloads: input.maxDownloads },
+          { token, expiresAt, maxDownloads: input.maxDownloads, recipientEmail: input.recipientEmail },
           ctx.req
         );
+        
+        // Send email notification if recipient email provided
+        if (input.recipientEmail) {
+          try {
+            const baseUrl = process.env.VITE_OAUTH_PORTAL_URL || '';
+            const shareUrl = `${baseUrl}/share/${token}`;
+            
+            await sendShareLinkNotification({
+              recipientEmail: input.recipientEmail,
+              recipientName: input.recipientName || 'Recipient',
+              fileName: file.name,
+              sharedBy: ctx.user.name || 'User',
+              shareUrl,
+              expiresAt,
+              hasPassword: !!input.password,
+              message: input.message,
+            });
+          } catch (error) {
+            console.error(`Failed to send share link notification:`, error);
+            // Don't fail the share creation if email fails
+          }
+        }
         
         return { token, shareLinkId };
       }),

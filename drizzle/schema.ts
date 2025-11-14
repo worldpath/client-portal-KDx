@@ -164,6 +164,9 @@ export const shareLinks = mysqlTable("share_links", {
   fileId: int("fileId").notNull(),
   token: varchar("token", { length: 64 }).notNull().unique(), // Unique shareable token
   createdBy: int("createdBy").notNull(), // User who created the share
+  recipientEmail: varchar("recipientEmail", { length: 320 }), // Optional recipient email for notifications
+  recipientName: varchar("recipientName", { length: 255 }), // Optional recipient name
+  message: text("message"), // Optional personal message from sender
   password: varchar("password", { length: 255 }), // Bcrypt hashed password (optional)
   expiresAt: timestamp("expiresAt"), // Expiration date (optional)
   maxDownloads: int("maxDownloads"), // Maximum number of downloads (optional)

@@ -1875,6 +1875,30 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ BULK OPERATIONS ============
+  bulk: router({
+    assignWorkflow: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        templateId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if user is admin
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Only administrators can perform bulk workflow assignments');
+        }
+
+        const { bulkAssignWorkflow } = await import('./bulkWorkflowAssignment');
+        const result = await bulkAssignWorkflow({
+          fileIds: input.fileIds,
+          templateId: input.templateId,
+          userId: ctx.user.id,
+        });
+
+        return result;
+      }),
+  }),
+
   // ============ WORKFLOW COMMENTS ============
   workflowComments: router({
     getStageComments: protectedProcedure

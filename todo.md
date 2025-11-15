@@ -601,3 +601,19 @@
 - [x] Test comment threading
 - [x] Test reply notifications
 - [x] Test nested @mentions
+
+## Bulk Workflow Assignment
+- [x] Add multi-select checkboxes to file list (already exists)
+- [x] Add "Select All" checkbox in file list header (already exists)
+- [x] Create bulk actions toolbar component (already exists)
+- [x] Build bulkAssignWorkflow backend procedure
+- [x] Add error handling for individual file failures
+- [x] Add tRPC endpoint for bulk workflow assignment
+- [x] Add admin-only access control
+- [x] Create bulk assignment dialog with template selector
+- [x] Add progress indicator for bulk operations (loading spinner)
+- [x] Show success/failure summary after bulk assignment
+- [x] Add audit logging for bulk workflow assignments (in backend)
+- [x] Restrict bulk assignment to admin users only
+- [x] Test bulk assignment with multiple files
+- [x] Test error handling for partial failures

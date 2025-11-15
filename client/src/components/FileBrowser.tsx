@@ -28,7 +28,8 @@ import {
   Filter,
   History,
   Share,
-  Archive
+  Archive,
+  GitBranch
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,8 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [targetFolderId, setTargetFolderId] = useState<number | undefined>(undefined);
+  const [showBulkWorkflowDialog, setShowBulkWorkflowDialog] = useState(false);
+  const [bulkWorkflowTemplateId, setBulkWorkflowTemplateId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -254,6 +257,23 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
     },
   });
 
+  // Bulk workflow assignment mutation
+  const bulkAssignWorkflowMutation = trpc.bulk.assignWorkflow.useMutation({
+    onSuccess: (data) => {
+      const message = data.successful === data.total
+        ? `Workflow assigned to ${data.successful} file(s) successfully`
+        : `Workflow assigned to ${data.successful} of ${data.total} file(s) (${data.failed} failed)`;
+      toast.success(message);
+      setSelectedFileIds(new Set());
+      setShowBulkWorkflowDialog(false);
+      setBulkWorkflowTemplateId(null);
+      utils.files.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to assign workflow");
+    },
+  });
+
   // Bulk download mutation
   const bulkDownloadMutation = trpc.files.bulkDownload.useMutation({
     onSuccess: (data) => {
@@ -373,6 +393,22 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
     if (confirm(`Archive ${selectedFileIds.size} file(s)? They can be restored later from the Archived Files view.`)) {
       bulkArchiveMutation.mutate({ fileIds: Array.from(selectedFileIds) });
     }
+  };
+
+  const handleBulkWorkflowAssignment = () => {
+    if (selectedFileIds.size === 0) return;
+    setShowBulkWorkflowDialog(true);
+  };
+
+  const confirmBulkWorkflowAssignment = () => {
+    if (!bulkWorkflowTemplateId) {
+      toast.error("Please select a workflow template");
+      return;
+    }
+    bulkAssignWorkflowMutation.mutate({
+      fileIds: Array.from(selectedFileIds),
+      templateId: bulkWorkflowTemplateId,
+    });
   };
 
   const formatFileSize = (bytes: number) => {
@@ -537,6 +573,16 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
                         onClick={() => setShowMoveDialog(true)}
                       >
                         Move
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkWorkflowAssignment}
+                        disabled={!isAdmin}
+                        title={!isAdmin ? "Only administrators can assign workflows" : ""}
+                      >
+                        <GitBranch className="w-4 h-4 mr-1" />
+                        Assign Workflow
                       </Button>
                       <Button
                         variant="outline"
@@ -894,6 +940,73 @@ export default function FileBrowser({ isAdmin }: FileBrowserProps) {
               {bulkMoveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Move Files
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Workflow Assignment Dialog */}
+      <Dialog open={showBulkWorkflowDialog} onOpenChange={setShowBulkWorkflowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Workflow to Files</DialogTitle>
+            <DialogDescription>
+              Select a workflow template to assign to {selectedFileIds.size} file(s)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Workflow Template</Label>
+              <select
+                value={bulkWorkflowTemplateId || ""}
+                onChange={(e) => setBulkWorkflowTemplateId(Number(e.target.value))}
+                className="w-full p-2 border border-border rounded-md bg-background text-foreground"
+              >
+                <option value="">Select a workflow template...</option>
+                {workflowTemplates?.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {bulkAssignWorkflowMutation.isSuccess && bulkAssignWorkflowMutation.data && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Assignment Results:</p>
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {bulkAssignWorkflowMutation.data.results.map((result, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "text-xs p-2 rounded",
+                        result.success
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "bg-red-50 text-red-700 border border-red-200"
+                      )}
+                    >
+                      {result.success ? "✓" : "✗"} {result.fileName}
+                      {result.error && ` - ${result.error}`}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {bulkAssignWorkflowMutation.data.successful} successful, {bulkAssignWorkflowMutation.data.failed} failed
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkWorkflowDialog(false)}>
+              {bulkAssignWorkflowMutation.isSuccess ? "Close" : "Cancel"}
+            </Button>
+            {!bulkAssignWorkflowMutation.isSuccess && (
+              <Button
+                onClick={confirmBulkWorkflowAssignment}
+                disabled={bulkAssignWorkflowMutation.isPending || !bulkWorkflowTemplateId}
+              >
+                {bulkAssignWorkflowMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Assign Workflow
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1137,6 +1137,31 @@ export const appRouter = router({
         return await db.getUserStorageUsage(ctx.user.id);
       }),
     
+    getWorkflowAnalytics: protectedProcedure
+      .query(async ({ ctx }) => {
+        // Only admins can view analytics
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only administrators can view analytics' });
+        }
+
+        const { getWorkflowAnalytics } = await import('./workflowAnalytics');
+        return await getWorkflowAnalytics();
+      }),
+    
+    sendWorkflowReminders: protectedProcedure
+      .input(z.object({
+        daysThreshold: z.number().default(3),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admins can send reminders
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only administrators can send reminders' });
+        }
+
+        const { sendWorkflowReminders } = await import('./workflowReminders');
+        return await sendWorkflowReminders(input.daysThreshold);
+      }),
+    
     storageByFolder: protectedProcedure
       .query(async ({ ctx }) => {
         return await db.getUserStorageByFolder(ctx.user.id);
@@ -1875,6 +1900,8 @@ export const appRouter = router({
       }),
   }),
 
+
+
   // ============ BULK OPERATIONS ============
   bulk: router({
     assignWorkflow: protectedProcedure
@@ -1918,6 +1945,59 @@ export const appRouter = router({
         return await getCommentThread(input.commentId);
       }),
 
+    editComment: protectedProcedure
+      .input(z.object({
+        commentId: z.number(),
+        newContent: z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { editComment } = await import('./commentEditing');
+        const result = await editComment(
+          input.commentId,
+          ctx.user.id,
+          input.newContent,
+          ctx.req.headers['x-forwarded-for'] as string,
+          ctx.req.headers['user-agent'] as string
+        );
+        
+        if (!result.success) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: result.error || 'Failed to edit comment' });
+        }
+        
+        await logAction(ctx.user.id, 'comment_edit', 'workflow_comment', input.commentId, { newContent: input.newContent }, ctx.req);
+        return result;
+      }),
+    
+    deleteComment: protectedProcedure
+      .input(z.object({
+        commentId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { deleteComment } = await import('./commentEditing');
+        const result = await deleteComment(
+          input.commentId,
+          ctx.user.id,
+          ctx.req.headers['x-forwarded-for'] as string,
+          ctx.req.headers['user-agent'] as string
+        );
+        
+        if (!result.success) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: result.error || 'Failed to delete comment' });
+        }
+        
+        await logAction(ctx.user.id, 'comment_delete', 'workflow_comment', input.commentId, {}, ctx.req);
+        return result;
+      }),
+    
+    canEditComment: protectedProcedure
+      .input(z.object({
+        commentId: z.number(),
+      }))
+      .query(async ({ input, ctx }) => {
+        const { canEditComment } = await import('./commentEditing');
+        return await canEditComment(input.commentId, ctx.user.id);
+      }),
+    
     replyToComment: protectedProcedure
       .input(z.object({
         parentCommentId: z.number(),

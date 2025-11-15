@@ -3,7 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import UserMentionInput from "@/components/UserMentionInput";
-import { MessageCircle, ChevronDown, ChevronRight, Reply, Loader2 } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronRight, Reply, Loader2, Edit, Trash2 } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +24,9 @@ interface CommentNodeProps {
   setReplyContent: (content: string) => void;
   handleReplySubmit: (parentCommentId: number) => void;
   isSubmitting: boolean;
+  currentUserId?: number;
+  onEdit: (commentId: number, content: string) => void;
+  onDelete: (commentId: number) => void;
 }
 
 function CommentNode({
@@ -32,6 +38,9 @@ function CommentNode({
   setReplyContent,
   handleReplySubmit,
   isSubmitting,
+  currentUserId,
+  onEdit,
+  onDelete,
 }: CommentNodeProps) {
   const [collapsed, setCollapsed] = useState(false);
   const hasReplies = comment.replies && comment.replies.length > 0;
@@ -106,6 +115,28 @@ function CommentNode({
                 <Reply className="h-3 w-3 mr-1" />
                 Reply
               </Button>
+              {currentUserId === comment.userId && !comment.deletedAt && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(comment.id, comment.content)}
+                    className="h-7 text-xs"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(comment.id)}
+                    className="h-7 text-xs text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </Button>
+                </>
+              )}
               {hasReplies && (
                 <span className="text-xs text-muted-foreground">
                   {comment.replies.length} {comment.replies.length === 1 ? "reply" : "replies"}
@@ -160,6 +191,9 @@ function CommentNode({
               setReplyContent={setReplyContent}
               handleReplySubmit={handleReplySubmit}
               isSubmitting={isSubmitting}
+              currentUserId={currentUserId}
+              onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -172,8 +206,12 @@ export default function WorkflowCommentThread({
   workflowInstanceId,
   stageId,
 }: WorkflowCommentThreadProps) {
+  const { user } = useAuth();
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -181,6 +219,30 @@ export default function WorkflowCommentThread({
   const { data: comments, isLoading } = trpc.workflowComments.getStageComments.useQuery({
     workflowInstanceId,
     stageId,
+  });
+
+  // Edit mutation
+  const editMutation = trpc.workflowComments.editComment.useMutation({
+    onSuccess: () => {
+      toast.success("Comment updated successfully");
+      setEditingCommentId(null);
+      utils.workflowComments.getStageComments.invalidate({ workflowInstanceId, stageId });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update comment");
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = trpc.workflowComments.deleteComment.useMutation({
+    onSuccess: () => {
+      toast.success("Comment deleted successfully");
+      setDeletingCommentId(null);
+      utils.workflowComments.getStageComments.invalidate({ workflowInstanceId, stageId });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete comment");
+    },
   });
 
   // Reply mutation
@@ -204,6 +266,28 @@ export default function WorkflowCommentThread({
     });
   };
 
+  const handleEdit = (commentId: number, content: string) => {
+    setEditingCommentId(commentId);
+    setEditContent(content);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingCommentId || !editContent.trim()) return;
+    editMutation.mutate({
+      commentId: editingCommentId,
+      newContent: editContent,
+    });
+  };
+
+  const handleDelete = (commentId: number) => {
+    setDeletingCommentId(commentId);
+  };
+
+  const confirmDelete = () => {
+    if (!deletingCommentId) return;
+    deleteMutation.mutate({ commentId: deletingCommentId });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -222,20 +306,73 @@ export default function WorkflowCommentThread({
   }
 
   return (
-    <div className="space-y-4">
-      {comments.map((comment: any) => (
-        <CommentNode
-          key={comment.id}
-          comment={comment}
-          depth={0}
-          onReply={setReplyingTo}
-          replyingTo={replyingTo}
-          replyContent={replyContent}
-          setReplyContent={setReplyContent}
-          handleReplySubmit={handleReplySubmit}
-          isSubmitting={replyMutation.isPending}
-        />
-      ))}
-    </div>
+    <>
+      <div className="space-y-4">
+        {comments.map((comment: any) => (
+          <CommentNode
+            key={comment.id}
+            comment={comment}
+            depth={0}
+            onReply={setReplyingTo}
+            replyingTo={replyingTo}
+            replyContent={replyContent}
+            setReplyContent={setReplyContent}
+            handleReplySubmit={handleReplySubmit}
+            isSubmitting={replyMutation.isPending}
+            currentUserId={user?.id}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editingCommentId !== null} onOpenChange={() => setEditingCommentId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Comment</DialogTitle>
+            <DialogDescription>
+              You can edit your comment within 15 minutes of posting.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={4}
+            placeholder="Edit your comment..."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingCommentId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={editMutation.isPending}>
+              {editMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deletingCommentId !== null} onOpenChange={() => setDeletingCommentId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Comment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this comment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingCommentId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

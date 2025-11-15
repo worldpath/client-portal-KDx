@@ -622,3 +622,37 @@
 - [x] Fix folder creation audit log NaN entityId bug
 - [x] Verify folder creation works correctly
 - [x] Test audit log shows correct folder ID
+
+## Workflow Analytics Dashboard
+- [x] Create analytics data aggregation backend procedures
+- [x] Calculate average approval times per stage
+- [x] Calculate reviewer workload distribution
+- [x] Identify workflow bottlenecks
+- [x] Calculate workflow completion rates
+- [x] Build WorkflowAnalytics page component
+- [x] Add visual charts using chart library
+- [x] Add analytics navigation to admin dashboard
+- [x] Test analytics calculations
+
+## Automated Workflow Reminders
+- [x] Create reminder scheduling system
+- [x] Build procedure to find pending reviews
+- [x] Calculate days pending per stage
+- [x] Send email reminders to reviewers
+- [x] Make reminder threshold configurable (3 days default)
+- [x] Add manual reminder trigger button to analytics page
+- [x] Test reminder scheduling
+- [x] Test email delivery
+
+## Comment Editing and Deletion
+- [x] Add editedAt timestamp to workflow_comments table
+- [x] Add deletedAt soft delete field
+- [x] Build editComment backend procedure with 15-minute window
+- [x] Build deleteComment backend procedure
+- [x] Add edit/delete tRPC endpoints
+- [x] Add edit button to comment UI
+- [x] Add delete button to comment UI
+- [ ] Show "edited" indicator on modified comments (future enhancement)
+- [x] Add audit logging for edit/delete actions
+- [x] Test 15-minute window enforcement
+- [x] Test edit/delete permissions

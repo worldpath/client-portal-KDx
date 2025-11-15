@@ -373,6 +373,8 @@ export const workflowComments = mysqlTable("workflow_comments", {
   parentCommentId: int("parentCommentId"), // For threaded replies (null for top-level comments)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  editedAt: timestamp("editedAt"), // When comment was last edited
+  deletedAt: timestamp("deletedAt"), // Soft delete timestamp
 }, (table) => ({
   workflowInstanceIdx: index("workflow_instance_idx").on(table.workflowInstanceId),
   stageIdx: index("stage_idx").on(table.stageId),

@@ -1,0 +1,138 @@
+# CODEOWNERS - Automatic Reviewer Assignment
+#
+# This file defines code ownership for the KDx Portal repository.
+# When a pull request modifies files, GitHub automatically requests
+# reviews from the designated owners.
+#
+# Syntax: <file-pattern> <owner1> <owner2> ...
+# Owners can be: @username, @org/team-name, or email@example.com
+#
+# More specific patterns override less specific ones.
+# Last matching pattern takes precedence.
+
+# Default owner for all files
+* @bryanra
+
+# ============================================
+# Infrastructure & Deployment
+# ============================================
+
+# GitHub workflows and actions
+/.github/ @bryanra
+/.github/workflows/ @bryanra
+
+# Deployment scripts and configuration
+/deployment/ @bryanra
+/deployment/scripts/ @bryanra
+/deployment/config/ @bryanra
+
+# Environment configuration
+.env* @bryanra
+*.config.js @bryanra
+*.config.ts @bryanra
+
+# ============================================
+# Database & Schema
+# ============================================
+
+# Database schema and migrations
+/drizzle/ @bryanra
+/drizzle/schema.ts @bryanra
+
+# ============================================
+# Backend / Server
+# ============================================
+
+# Server core and infrastructure
+/server/_core/ @bryanra
+
+# API routers and business logic
+/server/routers.ts @bryanra
+/server/db.ts @bryanra
+
+# Template management
+/server/templateManagement.ts @bryanra
+/server/templateVersions.ts @bryanra
+/server/regenerateThumbnails.ts @bryanra
+
+# File storage and thumbnails
+/server/storage.ts @bryanra
+/server/thumbnailService.ts @bryanra
+
+# ============================================
+# Frontend / Client
+# ============================================
+
+# Client application entry points
+/client/src/main.tsx @bryanra
+/client/src/App.tsx @bryanra
+
+# Core client infrastructure
+/client/src/_core/ @bryanra
+/client/src/lib/ @bryanra
+
+# UI components
+/client/src/components/ @bryanra
+
+# Page components
+/client/src/pages/ @bryanra
+
+# Styling and themes
+/client/src/index.css @bryanra
+/client/tailwind.config.ts @bryanra
+
+# ============================================
+# Shared Code
+# ============================================
+
+# Shared types and constants
+/shared/ @bryanra
+
+# ============================================
+# Configuration Files
+# ============================================
+
+# Package management
+package.json @bryanra
+pnpm-lock.yaml @bryanra
+
+# TypeScript configuration
+tsconfig.json @bryanra
+
+# Build configuration
+vite.config.ts @bryanra
+
+# ============================================
+# Documentation
+# ============================================
+
+# All markdown documentation
+*.md @bryanra
+
+# Deployment documentation
+/deployment/docs/ @bryanra
+
+# ============================================
+# Security & Sensitive Files
+# ============================================
+
+# Security-related files (require careful review)
+/server/_core/auth.ts @bryanra
+/server/_core/cookies.ts @bryanra
+/server/_core/jwt.ts @bryanra
+
+# ============================================
+# Notes for Code Owners
+# ============================================
+#
+# To add additional reviewers:
+# 1. Add their GitHub username to relevant sections
+# 2. Use @org/team-name for team-based ownership
+# 3. More specific patterns override general ones
+#
+# Example for multiple owners:
+# /client/src/pages/ @bryanra @developer2
+#
+# Example for team ownership:
+# /server/ @worldpath/backend-team
+#

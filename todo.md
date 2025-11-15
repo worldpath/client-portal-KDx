@@ -773,3 +773,15 @@
 - [ ] Test with various PDF documents (forms, reports, protocols)
 - [x] Add error handling for corrupted or unsupported PDFs
 - [x] Create admin endpoint to regenerate thumbnails for existing templates
+
+## Thumbnail Caching Strategy
+- [x] Add Cache-Control headers to S3 uploads for thumbnails (max-age, immutable)
+- [x] Set proper Content-Type and metadata for thumbnail objects
+- [x] Update storagePut to accept cache configuration options
+- [x] Configure long-term caching for thumbnails (1 year)
+- [x] Add lazy loading to thumbnail images in TemplateLibrary
+- [x] Add lazy loading to thumbnail images in TemplateManager
+- [x] Implement image loading states (skeleton/blur placeholder)
+- [ ] Add srcset for responsive thumbnail sizes
+- [ ] Test browser caching behavior with DevTools
+- [ ] Measure performance improvements (load time, bandwidth)

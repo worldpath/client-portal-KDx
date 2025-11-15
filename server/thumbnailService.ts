@@ -56,12 +56,15 @@ export async function generatePdfThumbnail(
     // Read the generated image
     const thumbnailBuffer = fs.readFileSync(result.path);
 
-    // Upload thumbnail to S3
+    // Upload thumbnail to S3 with long-term caching
     const thumbnailKey = `thumbnails/${Date.now()}-${fileName.replace(/\.[^/.]+$/, '')}.png`;
     const uploadResult = await storagePut(
       thumbnailKey,
       thumbnailBuffer,
-      'image/png'
+      {
+        contentType: 'image/png',
+        cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
+      }
     );
 
     // Clean up temp files
@@ -106,12 +109,15 @@ export async function generateWordThumbnail(
   try {
     const thumbnailSvg = createWordPlaceholderSvg(fileName);
     
-    // Upload thumbnail to S3
+    // Upload thumbnail to S3 with long-term caching
     const thumbnailKey = `thumbnails/${Date.now()}-${fileName.replace(/\.[^/.]+$/, '')}.svg`;
     const uploadResult = await storagePut(
       thumbnailKey,
       Buffer.from(thumbnailSvg),
-      'image/svg+xml'
+      {
+        contentType: 'image/svg+xml',
+        cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
+      }
     );
 
     return {

@@ -203,10 +203,12 @@ export default function TemplateManager() {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {template.thumbnailUrl ? (
-                        <div className="w-12 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                        <div className="w-12 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
                           <img 
                             src={template.thumbnailUrl} 
                             alt={template.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                         </div>

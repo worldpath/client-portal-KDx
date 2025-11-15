@@ -152,10 +152,12 @@ export default function TemplateLibrary() {
                     <CardHeader>
                       <div className="flex items-start justify-between gap-2">
                         {template.thumbnailUrl ? (
-                          <div className="w-16 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                          <div className="w-16 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
                             <img 
                               src={template.thumbnailUrl} 
                               alt={template.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           </div>

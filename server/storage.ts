@@ -67,14 +67,31 @@ function buildAuthHeaders(apiKey: string): HeadersInit {
   return { Authorization: `Bearer ${apiKey}` };
 }
 
+export interface StoragePutOptions {
+  contentType?: string;
+  cacheControl?: string;
+}
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
-  contentType = "application/octet-stream"
+  contentTypeOrOptions?: string | StoragePutOptions
 ): Promise<{ key: string; url: string }> {
+  // Handle backward compatibility
+  const options: StoragePutOptions = typeof contentTypeOrOptions === 'string'
+    ? { contentType: contentTypeOrOptions }
+    : contentTypeOrOptions || {};
+  
+  const contentType = options.contentType || "application/octet-stream";
   const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
   const uploadUrl = buildUploadUrl(baseUrl, key);
+  
+  // Add cache control to URL params if specified
+  if (options.cacheControl) {
+    uploadUrl.searchParams.set('cacheControl', options.cacheControl);
+  }
+  
   const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
   const response = await fetch(uploadUrl, {
     method: "POST",

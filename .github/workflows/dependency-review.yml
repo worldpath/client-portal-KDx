@@ -1,0 +1,56 @@
+name: Dependency Review
+
+# This workflow scans pull requests for dependency changes
+# and alerts on security vulnerabilities or license issues
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: Review Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail on high or critical vulnerabilities
+          fail-on-severity: high
+          
+          # Allow these licenses
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
+          
+          # Deny these licenses
+          deny-licenses: GPL-2.0, GPL-3.0, LGPL-2.0, LGPL-3.0, AGPL-3.0
+          
+          # Comment on PR with results
+          comment-summary-in-pr: always
+          
+          # Warn on moderate vulnerabilities
+          warn-on-severity: moderate
+          
+          # Show vulnerability details
+          vulnerability-check: true
+          
+          # Show license details
+          license-check: true
+          
+          # Configuration file (optional)
+          # config-file: '.github/dependency-review-config.yml'
+      
+      - name: Upload dependency graph
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: dependency-review-results
+          path: dependency-review-*.json
+          retention-days: 30

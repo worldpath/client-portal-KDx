@@ -1,0 +1,230 @@
+# Dependabot Configuration for KDx Portal
+# Automated dependency updates and security vulnerability scanning
+# Documentation: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # ============================================
+  # NPM Dependencies (Root Package)
+  # ============================================
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    
+    # Pull request configuration
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "/"
+    
+    # Commit message configuration
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    
+    # Labels for categorization
+    labels:
+      - "dependencies"
+      - "automated"
+    
+    # Reviewers (automatically request review)
+    reviewers:
+      - "bryanra"
+    
+    # Assignees (automatically assign PR)
+    assignees:
+      - "bryanra"
+    
+    # Version update strategy
+    versioning-strategy: "increase"
+    
+    # Group updates to reduce PR noise
+    groups:
+      # Group all production dependencies
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Group all development dependencies
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Separate group for React ecosystem
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      
+      # Separate group for tRPC ecosystem
+      trpc-ecosystem:
+        patterns:
+          - "@trpc/*"
+          - "@tanstack/react-query"
+      
+      # Separate group for Radix UI components
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      
+      # Separate group for build tools
+      build-tools:
+        patterns:
+          - "vite*"
+          - "esbuild"
+          - "typescript"
+          - "tsx"
+    
+    # Ignore specific dependencies
+    ignore:
+      # Ignore major version updates for stable dependencies
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      
+      # Ignore specific versions with known issues
+      # - dependency-name: "package-name"
+      #   versions: ["1.2.3"]
+    
+    # Allow dependencies from specific registries only
+    registries: "*"
+
+  # ============================================
+  # NPM Dependencies (Client Package)
+  # ============================================
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    
+    open-pull-requests-limit: 3
+    
+    commit-message:
+      prefix: "deps(client)"
+      prefix-development: "deps-dev(client)"
+    
+    labels:
+      - "dependencies"
+      - "client"
+      - "automated"
+    
+    reviewers:
+      - "bryanra"
+    
+    assignees:
+      - "bryanra"
+
+  # ============================================
+  # GitHub Actions
+  # ============================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "America/New_York"
+    
+    open-pull-requests-limit: 3
+    
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    
+    reviewers:
+      - "bryanra"
+    
+    assignees:
+      - "bryanra"
+    
+    # Group all GitHub Actions updates
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+# ============================================
+# Dependabot Features Enabled
+# ============================================
+#
+# ✅ Automated dependency updates
+# ✅ Security vulnerability scanning
+# ✅ Automatic pull request creation
+# ✅ Grouped updates to reduce PR noise
+# ✅ Separate schedules for different ecosystems
+# ✅ Automatic reviewer/assignee assignment
+# ✅ Semantic commit messages
+# ✅ Version update strategy
+# ✅ Ignore rules for major updates
+#
+# ============================================
+# Update Schedule
+# ============================================
+#
+# Monday 9:00 AM ET - NPM dependencies (root)
+# Monday 9:00 AM ET - NPM dependencies (client)
+# Monday 10:00 AM ET - GitHub Actions
+#
+# ============================================
+# PR Limits
+# ============================================
+#
+# Root NPM: 5 PRs max
+# Client NPM: 3 PRs max
+# GitHub Actions: 3 PRs max
+# Total: 11 PRs max per week
+#
+# ============================================
+# Grouping Strategy
+# ============================================
+#
+# Production dependencies grouped by minor/patch
+# Development dependencies grouped by minor/patch
+# React ecosystem grouped together
+# tRPC ecosystem grouped together
+# Radix UI components grouped together
+# Build tools grouped together
+# GitHub Actions grouped together
+#
+# Major version updates create individual PRs
+# Security updates always create immediate PRs
+#
+# ============================================
+# Review Process
+# ============================================
+#
+# 1. Dependabot creates PR with changelog
+# 2. CI workflow runs automatically
+# 3. Review PR for breaking changes
+# 4. Approve and merge if CI passes
+# 5. CD workflow deploys automatically
+#
+# ============================================
+# Security Alerts
+# ============================================
+#
+# Dependabot Security Updates are enabled by default
+# and will create PRs immediately when vulnerabilities
+# are detected, bypassing the weekly schedule.
+#
+# To enable in GitHub:
+# Settings → Security → Dependabot security updates
+#

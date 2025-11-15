@@ -562,3 +562,22 @@
 - [x] Show comment author and timestamp
 - [x] Test approval with comments
 - [x] Test approval without comments (backward compatibility)
+
+## @Mention Notification System
+- [x] Create @mention parsing utility function
+- [x] Build user autocomplete component for @ mentions
+- [x] Add user search endpoint for autocomplete
+- [x] Update approval/rejection comment handlers to detect mentions
+- [x] Create notifications for mentioned users
+- [x] Send email alerts to mentioned users
+- [x] Build notification center UI component
+- [x] Add notification bell icon to header
+- [x] Show unread notification count badge
+- [x] Add mark as read functionality
+- [x] Add mark all as read functionality
+- [x] Display mention notifications with context
+- [x] Link notifications to source file/comment
+- [x] Test @mention parsing
+- [x] Test user autocomplete
+- [x] Test notification creation
+- [x] Test email delivery

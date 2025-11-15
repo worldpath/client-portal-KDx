@@ -26,7 +26,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
-import NotificationBell from "./NotificationBell";
+import NotificationCenter from "./NotificationCenter";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Page 1", path: "/" },
@@ -198,7 +198,7 @@ function DashboardLayoutContent({
                     </span>
                   </div>
                   <div className="ml-auto flex items-center gap-1 shrink-0">
-                    <NotificationBell />
+                    <NotificationCenter />
                     <button
                       onClick={toggleSidebar}
                       className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -295,7 +295,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <NotificationBell />
+            <NotificationCenter />
           </div>
         )}
         <main className="flex-1 p-4">{children}</main>

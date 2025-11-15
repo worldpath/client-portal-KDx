@@ -131,6 +131,40 @@ export async function getAllUsers() {
   return await db.select().from(users).orderBy(desc(users.createdAt));
 }
 
+export async function searchUsers(query: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const searchTerm = `%${query}%`;
+  return await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(users)
+    .where(
+      or(
+        like(users.name, searchTerm),
+        like(users.email, searchTerm)
+      )
+    )
+    .limit(10);
+}
+
+export async function getUserByName(name: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.name, name))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
 export async function updateUserRole(userId: number, role: "admin" | "client") {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1968,6 +2002,28 @@ export async function approveWorkflowStage(
   const db = await getDb();
   if (!db) return null;
 
+  // Process mentions if comment contains any
+  if (comment) {
+    const { processMentions } = await import('./mentionNotifications');
+    const instance = await db.select().from(fileWorkflowInstances).where(eq(fileWorkflowInstances.id, workflowInstanceId)).limit(1);
+    if (instance.length > 0) {
+      const file = await getFileById(instance[0].fileId);
+      const reviewer = await getUserById(reviewerId);
+      const stage = await db.select().from(workflowStages).where(eq(workflowStages.id, stageId)).limit(1);
+      if (file && reviewer) {
+        await processMentions({
+          fileId: file.id,
+          fileName: file.name,
+          commentText: comment,
+          mentionerUserId: reviewerId,
+          mentionerName: reviewer.name || reviewer.email || 'User',
+          workflowStageId: stageId,
+          stageName: stage.length > 0 ? stage[0].stageName : undefined,
+        });
+      }
+    }
+  }
+
   // Get current progress
   const progress = await db
     .select()
@@ -2038,6 +2094,28 @@ export async function rejectWorkflowStage(
 ) {
   const db = await getDb();
   if (!db) return null;
+
+  // Process mentions in rejection reason
+  if (reason) {
+    const { processMentions } = await import('./mentionNotifications');
+    const instance = await db.select().from(fileWorkflowInstances).where(eq(fileWorkflowInstances.id, workflowInstanceId)).limit(1);
+    if (instance.length > 0) {
+      const file = await getFileById(instance[0].fileId);
+      const reviewer = await getUserById(reviewerId);
+      const stage = await db.select().from(workflowStages).where(eq(workflowStages.id, stageId)).limit(1);
+      if (file && reviewer) {
+        await processMentions({
+          fileId: file.id,
+          fileName: file.name,
+          commentText: reason,
+          mentionerUserId: reviewerId,
+          mentionerName: reviewer.name || reviewer.email || 'User',
+          workflowStageId: stageId,
+          stageName: stage.length > 0 ? stage[0].stageName : undefined,
+        });
+      }
+    }
+  }
 
   // Update progress
   const now = new Date();

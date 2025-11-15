@@ -61,6 +61,13 @@ export const appRouter = router({
       return await db.getAllUsers();
     }),
 
+    searchUsers: protectedProcedure
+      .input(z.object({ query: z.string() }))
+      .query(async ({ input }) => {
+        if (!input.query || input.query.length < 1) return [];
+        return await db.searchUsers(input.query);
+      }),
+
     invite: adminProcedure
       .input(z.object({
         email: z.string().email(),

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import UserMentionInput from "@/components/UserMentionInput";
 import { CheckCircle2, Circle, Clock, XCircle, Loader2, User, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -323,11 +324,11 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="approval-comment">Comment (Optional)</Label>
-              <Textarea
+              <UserMentionInput
                 id="approval-comment"
-                placeholder="Add context, notes, or feedback about your approval..."
+                placeholder="Add context, notes, or feedback about your approval... (Use @ to mention users)"
                 value={approvalComment}
-                onChange={(e) => setApprovalComment(e.target.value)}
+                onChange={setApprovalComment}
                 rows={4}
               />
             </div>
@@ -359,11 +360,11 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Rejection Reason</Label>
-              <Textarea
+              <UserMentionInput
                 id="reason"
-                placeholder="Explain why this stage is being rejected..."
+                placeholder="Explain why this stage is being rejected... (Use @ to mention users)"
                 value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
+                onChange={setRejectReason}
                 rows={4}
               />
             </div>

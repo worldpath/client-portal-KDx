@@ -798,3 +798,19 @@
 - [x] Add sizes attribute for proper image selection
 - [ ] Test on mobile, tablet, desktop, and retina displays
 - [ ] Measure bandwidth savings on different devices
+
+## WebP Format Integration
+- [x] Add WebP thumbnail URL fields to database schema (thumbnailUrlSmallWebp, etc.)
+- [x] Update thumbnail service to generate WebP versions using sharp
+- [x] Configure WebP quality settings (80-85 for optimal size/quality)
+- [x] Upload both PNG and WebP formats to S3 with cache headers
+- [x] Update createFileTemplate to store WebP URLs
+- [x] Update uploadNewTemplateVersion to store WebP URLs
+- [x] Update regenerateThumbnails to generate WebP versions
+- [x] Replace img tags with picture element in TemplateLibrary
+- [x] Replace img tags with picture element in TemplateManager
+- [x] Add source elements with type="image/webp" for WebP sources
+- [x] Add fallback img element for PNG sources
+- [ ] Test WebP support in Chrome, Firefox, Safari, Edge
+- [ ] Test PNG fallback in older browsers
+- [ ] Measure file size reduction (expect 25-35% savings)

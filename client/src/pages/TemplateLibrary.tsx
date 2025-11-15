@@ -153,15 +153,22 @@ export default function TemplateLibrary() {
                       <div className="flex items-start justify-between gap-2">
                         {template.thumbnailUrlMedium ? (
                           <div className="w-16 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
-                            <img 
-                              src={template.thumbnailUrlMedium} 
-                              srcSet={`${template.thumbnailUrlSmall} 200w, ${template.thumbnailUrlMedium} 400w, ${template.thumbnailUrlLarge} 800w`}
-                              sizes="64px"
-                              alt={template.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover"
-                            />
+                            <picture>
+                              <source 
+                                type="image/webp"
+                                srcSet={`${template.thumbnailUrlSmallWebp} 200w, ${template.thumbnailUrlMediumWebp} 400w, ${template.thumbnailUrlLargeWebp} 800w`}
+                                sizes="64px"
+                              />
+                              <img 
+                                src={template.thumbnailUrlMedium} 
+                                srcSet={`${template.thumbnailUrlSmall} 200w, ${template.thumbnailUrlMedium} 400w, ${template.thumbnailUrlLarge} 800w`}
+                                sizes="64px"
+                                alt={template.name}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover"
+                              />
+                            </picture>
                           </div>
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">

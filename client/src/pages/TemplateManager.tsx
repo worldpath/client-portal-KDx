@@ -204,15 +204,22 @@ export default function TemplateManager() {
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {template.thumbnailUrlMedium ? (
                         <div className="w-12 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
-                          <img 
-                            src={template.thumbnailUrlMedium} 
-                            srcSet={`${template.thumbnailUrlSmall} 200w, ${template.thumbnailUrlMedium} 400w, ${template.thumbnailUrlLarge} 800w`}
-                            sizes="48px"
-                            alt={template.name}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover"
-                          />
+                          <picture>
+                            <source 
+                              type="image/webp"
+                              srcSet={`${template.thumbnailUrlSmallWebp} 200w, ${template.thumbnailUrlMediumWebp} 400w, ${template.thumbnailUrlLargeWebp} 800w`}
+                              sizes="48px"
+                            />
+                            <img 
+                              src={template.thumbnailUrlMedium} 
+                              srcSet={`${template.thumbnailUrlSmall} 200w, ${template.thumbnailUrlMedium} 400w, ${template.thumbnailUrlLarge} 800w`}
+                              sizes="48px"
+                              alt={template.name}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover"
+                            />
+                          </picture>
                         </div>
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">

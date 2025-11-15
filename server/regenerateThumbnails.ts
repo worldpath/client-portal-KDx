@@ -42,6 +42,9 @@ export async function regenerateTemplateThumbnail(templateId: number): Promise<b
       thumbnailUrlSmall: thumbnail.thumbnailUrls.small,
       thumbnailUrlMedium: thumbnail.thumbnailUrls.medium,
       thumbnailUrlLarge: thumbnail.thumbnailUrls.large,
+      thumbnailUrlSmallWebp: thumbnail.thumbnailUrls.smallWebp,
+      thumbnailUrlMediumWebp: thumbnail.thumbnailUrls.mediumWebp,
+      thumbnailUrlLargeWebp: thumbnail.thumbnailUrls.largeWebp,
     })
     .where(eq(fileTemplates.id, templateId));
 
@@ -82,6 +85,9 @@ export async function regenerateAllThumbnails(): Promise<{
             thumbnailUrlSmall: thumbnail.thumbnailUrls.small,
             thumbnailUrlMedium: thumbnail.thumbnailUrls.medium,
             thumbnailUrlLarge: thumbnail.thumbnailUrls.large,
+            thumbnailUrlSmallWebp: thumbnail.thumbnailUrls.smallWebp,
+            thumbnailUrlMediumWebp: thumbnail.thumbnailUrls.mediumWebp,
+            thumbnailUrlLargeWebp: thumbnail.thumbnailUrls.largeWebp,
           })
           .where(eq(fileTemplates.id, template.id));
         
@@ -144,6 +150,9 @@ export async function regenerateSvgThumbnails(): Promise<{
             thumbnailUrlSmall: thumbnail.thumbnailUrls.small,
             thumbnailUrlMedium: thumbnail.thumbnailUrls.medium,
             thumbnailUrlLarge: thumbnail.thumbnailUrls.large,
+            thumbnailUrlSmallWebp: thumbnail.thumbnailUrls.smallWebp,
+            thumbnailUrlMediumWebp: thumbnail.thumbnailUrls.mediumWebp,
+            thumbnailUrlLargeWebp: thumbnail.thumbnailUrls.largeWebp,
           })
           .where(eq(fileTemplates.id, template.id));
         

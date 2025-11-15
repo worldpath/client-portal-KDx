@@ -9,6 +9,9 @@ export interface ThumbnailUrls {
   small: string;
   medium: string;
   large: string;
+  smallWebp: string;
+  mediumWebp: string;
+  largeWebp: string;
 }
 
 export interface ThumbnailResult {
@@ -17,26 +20,33 @@ export interface ThumbnailResult {
     small: string;
     medium: string;
     large: string;
+    smallWebp: string;
+    mediumWebp: string;
+    largeWebp: string;
   };
 }
 
 /**
- * Resize image buffer to multiple sizes using sharp
+ * Resize image buffer to multiple sizes in both PNG and WebP formats
  */
 async function resizeImage(
   inputBuffer: Buffer,
   sizes: { width: number; height: number; suffix: string }[]
-): Promise<{ buffer: Buffer; suffix: string }[]> {
+): Promise<{ bufferPng: Buffer; bufferWebp: Buffer; suffix: string }[]> {
   const results = await Promise.all(
     sizes.map(async ({ width, height, suffix }) => {
-      const buffer = await sharp(inputBuffer)
-        .resize(width, height, {
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
-        })
-        .png()
-        .toBuffer();
-      return { buffer, suffix };
+      const sharpInstance = sharp(inputBuffer).resize(width, height, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      });
+
+      // Generate both PNG and WebP in parallel
+      const [bufferPng, bufferWebp] = await Promise.all([
+        sharpInstance.clone().png().toBuffer(),
+        sharpInstance.clone().webp({ quality: 85 }).toBuffer()
+      ]);
+
+      return { bufferPng, bufferWebp, suffix };
     })
   );
   return results;
@@ -103,23 +113,31 @@ export async function generatePdfThumbnail(
 
     const resizedImages = await resizeImage(highResBuffer, sizes);
 
-    // Upload all sizes to S3 with long-term caching
+    // Upload all sizes to S3 with long-term caching (both PNG and WebP)
     const timestamp = Date.now();
     const baseKey = `thumbnails/${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}`;
     
     const uploadResults = await Promise.all(
-      resizedImages.map(async ({ buffer, suffix }) => {
-        const key = `${baseKey}-${suffix}.png`;
-        const result = await storagePut(
-          key,
-          buffer,
+      resizedImages.flatMap(({ bufferPng, bufferWebp, suffix }) => [
+        // Upload PNG version
+        storagePut(
+          `${baseKey}-${suffix}.png`,
+          bufferPng,
           {
             contentType: 'image/png',
-            cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
+            cacheControl: 'public, max-age=31536000, immutable'
           }
-        );
-        return { url: result.url, key, suffix };
-      })
+        ).then(result => ({ url: result.url, key: result.key, suffix, format: 'png' })),
+        // Upload WebP version
+        storagePut(
+          `${baseKey}-${suffix}.webp`,
+          bufferWebp,
+          {
+            contentType: 'image/webp',
+            cacheControl: 'public, max-age=31536000, immutable'
+          }
+        ).then(result => ({ url: result.url, key: result.key, suffix, format: 'webp' }))
+      ])
     );
 
     // Clean up temp files
@@ -131,17 +149,23 @@ export async function generatePdfThumbnail(
       console.warn('Failed to clean up temp files:', cleanupError);
     }
 
-    // Organize results by size
+    // Organize results by size and format
     const thumbnailUrls: ThumbnailUrls = {
-      small: uploadResults.find(r => r.suffix === 'small')!.url,
-      medium: uploadResults.find(r => r.suffix === 'medium')!.url,
-      large: uploadResults.find(r => r.suffix === 'large')!.url,
+      small: uploadResults.find(r => r.suffix === 'small' && r.format === 'png')!.url,
+      medium: uploadResults.find(r => r.suffix === 'medium' && r.format === 'png')!.url,
+      large: uploadResults.find(r => r.suffix === 'large' && r.format === 'png')!.url,
+      smallWebp: uploadResults.find(r => r.suffix === 'small' && r.format === 'webp')!.url,
+      mediumWebp: uploadResults.find(r => r.suffix === 'medium' && r.format === 'webp')!.url,
+      largeWebp: uploadResults.find(r => r.suffix === 'large' && r.format === 'webp')!.url,
     };
 
     const thumbnailKeys = {
-      small: uploadResults.find(r => r.suffix === 'small')!.key,
-      medium: uploadResults.find(r => r.suffix === 'medium')!.key,
-      large: uploadResults.find(r => r.suffix === 'large')!.key,
+      small: uploadResults.find(r => r.suffix === 'small' && r.format === 'png')!.key,
+      medium: uploadResults.find(r => r.suffix === 'medium' && r.format === 'png')!.key,
+      large: uploadResults.find(r => r.suffix === 'large' && r.format === 'png')!.key,
+      smallWebp: uploadResults.find(r => r.suffix === 'small' && r.format === 'webp')!.key,
+      mediumWebp: uploadResults.find(r => r.suffix === 'medium' && r.format === 'webp')!.key,
+      largeWebp: uploadResults.find(r => r.suffix === 'large' && r.format === 'webp')!.key,
     };
 
     return { thumbnailUrls, thumbnailKeys };
@@ -182,31 +206,47 @@ export async function generateWordThumbnail(
     const baseKey = `thumbnails/${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}`;
 
     const uploadResults = await Promise.all(
-      sizes.map(async ({ width, height, suffix }) => {
+      sizes.flatMap(({ width, height, suffix }) => {
         const svg = createWordPlaceholderSvg(fileName, width, height);
-        const key = `${baseKey}-${suffix}.svg`;
-        const result = await storagePut(
-          key,
-          Buffer.from(svg),
-          {
-            contentType: 'image/svg+xml',
-            cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
-          }
-        );
-        return { url: result.url, key, suffix };
+        return [
+          // Upload SVG as PNG placeholder
+          storagePut(
+            `${baseKey}-${suffix}.png`,
+            Buffer.from(svg),
+            {
+              contentType: 'image/svg+xml',
+              cacheControl: 'public, max-age=31536000, immutable'
+            }
+          ).then(result => ({ url: result.url, key: result.key, suffix, format: 'png' })),
+          // Upload SVG as WebP placeholder (same SVG content)
+          storagePut(
+            `${baseKey}-${suffix}.webp`,
+            Buffer.from(svg),
+            {
+              contentType: 'image/svg+xml',
+              cacheControl: 'public, max-age=31536000, immutable'
+            }
+          ).then(result => ({ url: result.url, key: result.key, suffix, format: 'webp' }))
+        ];
       })
     );
 
     const thumbnailUrls: ThumbnailUrls = {
-      small: uploadResults.find(r => r.suffix === 'small')!.url,
-      medium: uploadResults.find(r => r.suffix === 'medium')!.url,
-      large: uploadResults.find(r => r.suffix === 'large')!.url,
+      small: uploadResults.find(r => r.suffix === 'small' && r.format === 'png')!.url,
+      medium: uploadResults.find(r => r.suffix === 'medium' && r.format === 'png')!.url,
+      large: uploadResults.find(r => r.suffix === 'large' && r.format === 'png')!.url,
+      smallWebp: uploadResults.find(r => r.suffix === 'small' && r.format === 'webp')!.url,
+      mediumWebp: uploadResults.find(r => r.suffix === 'medium' && r.format === 'webp')!.url,
+      largeWebp: uploadResults.find(r => r.suffix === 'large' && r.format === 'webp')!.url,
     };
 
     const thumbnailKeys = {
-      small: uploadResults.find(r => r.suffix === 'small')!.key,
-      medium: uploadResults.find(r => r.suffix === 'medium')!.key,
-      large: uploadResults.find(r => r.suffix === 'large')!.key,
+      small: uploadResults.find(r => r.suffix === 'small' && r.format === 'png')!.key,
+      medium: uploadResults.find(r => r.suffix === 'medium' && r.format === 'png')!.key,
+      large: uploadResults.find(r => r.suffix === 'large' && r.format === 'png')!.key,
+      smallWebp: uploadResults.find(r => r.suffix === 'small' && r.format === 'webp')!.key,
+      mediumWebp: uploadResults.find(r => r.suffix === 'medium' && r.format === 'webp')!.key,
+      largeWebp: uploadResults.find(r => r.suffix === 'large' && r.format === 'webp')!.key,
     };
 
     return { thumbnailUrls, thumbnailKeys };

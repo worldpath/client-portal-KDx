@@ -581,3 +581,23 @@
 - [x] Test user autocomplete
 - [x] Test notification creation
 - [x] Test email delivery
+
+## Threaded Comment System
+- [x] Create workflow_comments table for storing all comments
+- [x] Add parentCommentId field for thread relationships
+- [ ] Migrate existing approval/rejection comments to new table (deferred - new system will be used going forward)
+- [x] Create getCommentThread backend procedure
+- [x] Create replyToComment backend procedure
+- [x] Add tRPC endpoints for workflow comments
+- [x] Integrate comment creation in approve/reject workflows
+- [x] Build CommentThread UI component
+- [x] Add reply button to each comment
+- [x] Display nested comments with indentation
+- [x] Add collapse/expand functionality for threads
+- [x] Create reply notifications (via @mention system)
+- [x] Support @mentions in reply comments
+- [x] Show parent comment context in replies
+- [x] Integrate comment thread into workflow timeline
+- [x] Test comment threading
+- [x] Test reply notifications
+- [x] Test nested @mentions

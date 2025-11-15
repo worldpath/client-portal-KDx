@@ -1875,6 +1875,72 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ WORKFLOW COMMENTS ============
+  workflowComments: router({
+    getStageComments: protectedProcedure
+      .input(z.object({ 
+        workflowInstanceId: z.number(),
+        stageId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const { getStageComments } = await import('./workflowComments');
+        return await getStageComments(input.workflowInstanceId, input.stageId);
+      }),
+
+    getCommentThread: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .query(async ({ input }) => {
+        const { getCommentThread } = await import('./workflowComments');
+        return await getCommentThread(input.commentId);
+      }),
+
+    replyToComment: protectedProcedure
+      .input(z.object({
+        parentCommentId: z.number(),
+        content: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { replyToComment } = await import('./workflowComments');
+        await replyToComment({
+          parentCommentId: input.parentCommentId,
+          userId: ctx.user.id,
+          content: input.content,
+        });
+
+        // Process mentions in reply
+        if (input.content) {
+          const { processMentions } = await import('./mentionNotifications');
+          const { getCommentThread } = await import('./workflowComments');
+          const thread = await getCommentThread(input.parentCommentId);
+          if (thread) {
+            const file = await db.getFileById(thread.fileId);
+            if (file) {
+              await processMentions({
+                fileId: file.id,
+                fileName: file.name,
+                commentText: input.content,
+                mentionerUserId: ctx.user.id,
+                mentionerName: ctx.user.name || ctx.user.email || 'User',
+                workflowStageId: thread.stageId,
+              });
+            }
+          }
+        }
+
+        return { success: true };
+      }),
+
+    getCommentCount: protectedProcedure
+      .input(z.object({ 
+        workflowInstanceId: z.number(),
+        stageId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const { getStageCommentCount } = await import('./workflowComments');
+        return await getStageCommentCount(input.workflowInstanceId, input.stageId);
+      }),
+  }),
+
   // ============ NOTIFICATIONS ============
   notifications: router({
     list: protectedProcedure

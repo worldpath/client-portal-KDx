@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import UserMentionInput from "@/components/UserMentionInput";
-import { CheckCircle2, Circle, Clock, XCircle, Loader2, User, Undo2 } from "lucide-react";
+import WorkflowCommentThread from "@/components/WorkflowCommentThread";
+import { CheckCircle2, Circle, Clock, XCircle, Loader2, User, Undo2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -301,6 +302,20 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
                           {progressItem.rejectionReason && (
                             <p className="mt-1 italic">Reason: {progressItem.rejectionReason}</p>
                           )}
+                        </div>
+                      )}
+
+                      {/* Comment Thread */}
+                      {(isCompleted || isRejected) && workflowProgress && (
+                        <div className="mt-4 pt-4 border-t">
+                          <div className="flex items-center gap-2 mb-3">
+                            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                            <h4 className="text-sm font-medium">Discussion</h4>
+                          </div>
+                          <WorkflowCommentThread
+                            workflowInstanceId={workflowProgress.instance.id}
+                            stageId={progressItem.stageId}
+                          />
                         </div>
                       )}
                     </div>

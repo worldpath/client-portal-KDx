@@ -2002,25 +2002,39 @@ export async function approveWorkflowStage(
   const db = await getDb();
   if (!db) return null;
 
-  // Process mentions if comment contains any
+  // Get instance and file info for comment creation
+  const instance = await db.select().from(fileWorkflowInstances).where(eq(fileWorkflowInstances.id, workflowInstanceId)).limit(1);
+  if (instance.length === 0) return null;
+  const fileId = instance[0].fileId;
+
+  // Create workflow comment if comment provided
   if (comment) {
+    const { createWorkflowComment } = await import('./workflowComments');
+    await createWorkflowComment({
+      workflowInstanceId,
+      stageId,
+      fileId,
+      userId: reviewerId,
+      commentType: "approval",
+      content: comment,
+      parentCommentId: null,
+    });
+
+    // Process mentions
     const { processMentions } = await import('./mentionNotifications');
-    const instance = await db.select().from(fileWorkflowInstances).where(eq(fileWorkflowInstances.id, workflowInstanceId)).limit(1);
-    if (instance.length > 0) {
-      const file = await getFileById(instance[0].fileId);
-      const reviewer = await getUserById(reviewerId);
-      const stage = await db.select().from(workflowStages).where(eq(workflowStages.id, stageId)).limit(1);
-      if (file && reviewer) {
-        await processMentions({
-          fileId: file.id,
-          fileName: file.name,
-          commentText: comment,
-          mentionerUserId: reviewerId,
-          mentionerName: reviewer.name || reviewer.email || 'User',
-          workflowStageId: stageId,
-          stageName: stage.length > 0 ? stage[0].stageName : undefined,
-        });
-      }
+    const file = await getFileById(fileId);
+    const reviewer = await getUserById(reviewerId);
+    const stage = await db.select().from(workflowStages).where(eq(workflowStages.id, stageId)).limit(1);
+    if (file && reviewer) {
+      await processMentions({
+        fileId: file.id,
+        fileName: file.name,
+        commentText: comment,
+        mentionerUserId: reviewerId,
+        mentionerName: reviewer.name || reviewer.email || 'User',
+        workflowStageId: stageId,
+        stageName: stage.length > 0 ? stage[0].stageName : undefined,
+      });
     }
   }
 
@@ -2095,25 +2109,39 @@ export async function rejectWorkflowStage(
   const db = await getDb();
   if (!db) return null;
 
+  // Get instance and file info for comment creation
+  const instance = await db.select().from(fileWorkflowInstances).where(eq(fileWorkflowInstances.id, workflowInstanceId)).limit(1);
+  if (instance.length === 0) return null;
+  const fileId = instance[0].fileId;
+
+  // Create workflow comment for rejection
+  const { createWorkflowComment } = await import('./workflowComments');
+  await createWorkflowComment({
+    workflowInstanceId,
+    stageId,
+    fileId,
+    userId: reviewerId,
+    commentType: "rejection",
+    content: reason,
+    parentCommentId: null,
+  });
+
   // Process mentions in rejection reason
   if (reason) {
     const { processMentions } = await import('./mentionNotifications');
-    const instance = await db.select().from(fileWorkflowInstances).where(eq(fileWorkflowInstances.id, workflowInstanceId)).limit(1);
-    if (instance.length > 0) {
-      const file = await getFileById(instance[0].fileId);
-      const reviewer = await getUserById(reviewerId);
-      const stage = await db.select().from(workflowStages).where(eq(workflowStages.id, stageId)).limit(1);
-      if (file && reviewer) {
-        await processMentions({
-          fileId: file.id,
-          fileName: file.name,
-          commentText: reason,
-          mentionerUserId: reviewerId,
-          mentionerName: reviewer.name || reviewer.email || 'User',
-          workflowStageId: stageId,
-          stageName: stage.length > 0 ? stage[0].stageName : undefined,
-        });
-      }
+    const file = await getFileById(fileId);
+    const reviewer = await getUserById(reviewerId);
+    const stage = await db.select().from(workflowStages).where(eq(workflowStages.id, stageId)).limit(1);
+    if (file && reviewer) {
+      await processMentions({
+        fileId: file.id,
+        fileName: file.name,
+        commentText: reason,
+        mentionerUserId: reviewerId,
+        mentionerName: reviewer.name || reviewer.email || 'User',
+        workflowStageId: stageId,
+        stageName: stage.length > 0 ? stage[0].stageName : undefined,
+      });
     }
   }
 

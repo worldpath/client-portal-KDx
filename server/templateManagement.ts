@@ -49,6 +49,14 @@ export async function createFileTemplate(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Generate thumbnail for supported file types
+  const { generateThumbnail } = await import('./thumbnailService');
+  const thumbnail = await generateThumbnail(
+    data.fileUrl,
+    data.fileName,
+    data.mimeType || null
+  );
+
   const result = await db.insert(fileTemplates).values({
     name: data.name,
     description: data.description || null,
@@ -57,6 +65,7 @@ export async function createFileTemplate(data: {
     fileKey: data.fileKey,
     fileName: data.fileName,
     mimeType: data.mimeType || null,
+    thumbnailUrl: thumbnail?.thumbnailUrl || null,
     downloadCount: 0,
     createdBy: data.uploadedBy,
     createdFromRequestId: data.createdFromRequestId || null,

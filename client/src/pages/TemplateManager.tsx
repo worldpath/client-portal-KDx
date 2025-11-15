@@ -202,9 +202,19 @@ export default function TemplateManager() {
                     className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
+                      {template.thumbnailUrl ? (
+                        <div className="w-12 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                          <img 
+                            src={template.thumbnailUrl} 
+                            alt={template.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-primary" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{template.name}</p>
                         {template.description && (

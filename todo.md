@@ -748,3 +748,18 @@
 - [x] Implement pre-filled template upload dialog
 - [x] Link created template back to request (via createdFromRequestId)
 - [x] Test template creation from request
+
+## Template Preview Thumbnails
+- [x] Add thumbnailUrl field to file_templates schema
+- [x] Add thumbnailUrl field to template_versions schema
+- [x] Install pdf-lib or pdf-thumbnail package for PDF thumbnail generation
+- [x] Create thumbnail generation service module
+- [x] Generate thumbnails for PDFs (first page)
+- [x] Generate thumbnails for Word documents (convert to PDF first, then thumbnail)
+- [x] Upload thumbnails to S3 storage
+- [x] Integrate thumbnail generation into template upload flow
+- [x] Integrate thumbnail generation into version upload flow
+- [x] Update TemplateLibrary to display thumbnails
+- [x] Update TemplateManager to display thumbnails
+- [x] Add fallback icons for templates without thumbnails
+- [ ] Test thumbnail generation with various document types

@@ -29,6 +29,14 @@ export async function uploadNewTemplateVersion(params: {
     ? existingVersions[0].versionNumber + 1 
     : 1;
 
+  // Generate thumbnail for supported file types
+  const { generateThumbnail } = await import('./thumbnailService');
+  const thumbnail = await generateThumbnail(
+    params.fileUrl,
+    params.fileName,
+    params.mimeType
+  );
+
   // Mark all existing versions as not latest
   await db
     .update(templateVersions)
@@ -43,6 +51,7 @@ export async function uploadNewTemplateVersion(params: {
     fileKey: params.fileKey,
     fileName: params.fileName,
     mimeType: params.mimeType,
+    thumbnailUrl: thumbnail?.thumbnailUrl || null,
     downloadCount: 0,
     isLatest: 1,
     uploadedBy: params.uploadedBy,

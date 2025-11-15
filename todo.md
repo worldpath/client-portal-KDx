@@ -896,3 +896,20 @@
 - [x] Add security dashboard to admin navigation
 - [x] Add route in App.tsx
 - [x] Style dashboard with cards and charts
+
+## GitHub Integration Settings UI
+- [x] Create database table for system settings
+- [x] Create backend API to store GitHub settings
+- [x] Create backend API to retrieve GitHub settings
+- [x] Encrypt GitHub token before storing
+- [x] Add validation for GitHub token format
+- [x] Add validation for repository owner/name
+- [x] Test GitHub connection with provided credentials
+- [x] Create GitHubSettings component
+- [x] Add form fields for token, owner, repo
+- [x] Add test connection button
+- [x] Add save settings functionality
+- [x] Show success/error messages
+- [x] Mask token in UI (show only last 4 characters)
+- [x] Add settings page to admin navigation
+- [x] Update githubSecurityService to use database settings

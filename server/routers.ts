@@ -2695,6 +2695,46 @@ export const appRouter = router({
       
       return await getWorkflowRuns();
     }),
+
+    // GitHub Settings Management
+    getGitHubSettings: adminProcedure.query(async () => {
+      const { getGitHubSettings } = await import('./githubSettings');
+      const settings = await getGitHubSettings();
+      
+      // Mask token (show only last 4 characters)
+      if (settings.token) {
+        const token = settings.token;
+        settings.token = '****' + token.slice(-4);
+      }
+      
+      return settings;
+    }),
+
+    saveGitHubSettings: adminProcedure
+      .input(z.object({
+        token: z.string().optional(),
+        owner: z.string().min(1).optional(),
+        repo: z.string().min(1).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { saveGitHubSettings } = await import('./githubSettings');
+        
+        await saveGitHubSettings(input, ctx.user.id);
+        
+        return { success: true };
+      }),
+
+    testGitHubConnection: adminProcedure
+      .input(z.object({
+        token: z.string().min(1),
+        owner: z.string().min(1),
+        repo: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const { testGitHubConnection } = await import('./githubSettings');
+        
+        return await testGitHubConnection(input.token, input.owner, input.repo);
+      }),
   }),
 });
 

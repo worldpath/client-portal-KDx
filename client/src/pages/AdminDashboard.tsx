@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search, GitBranch, Shield } from "lucide-react";
+import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search, GitBranch, Shield, Settings as SettingsIcon } from "lucide-react";
 import { APP_TITLE } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -78,6 +78,14 @@ export default function AdminDashboard() {
               title="Search files"
             >
               <Search className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setLocation('/admin/settings')}
+              title="Settings"
+            >
+              <SettingsIcon className="w-5 h-5" />
             </Button>
             <Button
               variant="ghost"

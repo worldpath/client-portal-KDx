@@ -18,6 +18,7 @@ import TemplateManager from "@/pages/TemplateManager";
 import TemplateLibrary from "./pages/TemplateLibrary";
 import MyTemplateRequests from "./pages/MyTemplateRequests";
 import SecurityDashboard from "./pages/SecurityDashboard";
+import AdminSettings from "./pages/AdminSettings";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/template-library" component={TemplateLibrary} />
       <Route path="/my-template-requests" component={MyTemplateRequests} />
       <Route path="/admin/security" component={SecurityDashboard} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route path={"/search/:query"} component={SearchResults} />
       <Route path={"/search"} component={SearchResults} />
       <Route path={"/share/:token"} component={SharedFile} />

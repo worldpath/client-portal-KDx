@@ -475,3 +475,22 @@ export const workflowComments = mysqlTable("workflow_comments", {
 
 export type WorkflowComment = typeof workflowComments.$inferSelect;
 export type InsertWorkflowComment = typeof workflowComments.$inferInsert;
+
+
+/**
+ * System settings for storing application configuration
+ * Uses key-value pairs for flexible configuration storage
+ */
+export const systemSettings = mysqlTable("system_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 255 }).notNull().unique(),
+  value: text("value"),
+  encrypted: boolean("encrypted").default(false).notNull(),
+  description: text("description"),
+  updatedBy: int("updatedBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = typeof systemSettings.$inferInsert;

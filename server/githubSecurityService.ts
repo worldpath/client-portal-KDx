@@ -16,15 +16,29 @@ import { ENV } from './_core/env';
 // GitHub API base URL
 const GITHUB_API_BASE = 'https://api.github.com';
 
-// Repository information (update these with your actual values)
-const GITHUB_OWNER = process.env.GITHUB_OWNER || 'your-github-username';
-const GITHUB_REPO = process.env.GITHUB_REPO || 'kdx-secure-portal';
+// Repository information - will be loaded from database or env vars
+let GITHUB_OWNER = process.env.GITHUB_OWNER || '';
+let GITHUB_REPO = process.env.GITHUB_REPO || '';
+let GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+
+// Load settings from database if not in environment
+async function loadGitHubConfig() {
+  if (!GITHUB_OWNER || !GITHUB_REPO || !GITHUB_TOKEN) {
+    const { getEffectiveGitHubSettings } = await import('./githubSettings');
+    const settings = await getEffectiveGitHubSettings();
+    
+    if (settings.owner) GITHUB_OWNER = settings.owner;
+    if (settings.repo) GITHUB_REPO = settings.repo;
+    if (settings.token) GITHUB_TOKEN = settings.token;
+  }
+}
 
 /**
  * Make authenticated request to GitHub API
  */
 async function githubRequest(endpoint: string) {
-  const token = process.env.GITHUB_TOKEN;
+  await loadGitHubConfig();
+  const token = GITHUB_TOKEN;
   
   if (!token) {
     throw new Error('GITHUB_TOKEN environment variable is not set');
@@ -326,6 +340,7 @@ export async function getSecurityMetrics(): Promise<SecurityMetrics> {
 /**
  * Check if GitHub integration is configured
  */
-export function isGitHubConfigured(): boolean {
-  return !!(process.env.GITHUB_TOKEN && process.env.GITHUB_OWNER && process.env.GITHUB_REPO);
+export async function isGitHubConfigured(): Promise<boolean> {
+  await loadGitHubConfig();
+  return !!(GITHUB_TOKEN && GITHUB_OWNER && GITHUB_REPO);
 }

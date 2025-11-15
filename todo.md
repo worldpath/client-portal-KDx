@@ -675,3 +675,31 @@
 - [x] Test PDF comparison
 - [x] Test document comparison
 - [x] Test large file handling
+
+## File Templates Library
+- [x] Create template_categories table
+- [x] Create file_templates table with category, version tracking
+- [x] Add downloadCount field for usage statistics
+- [x] Build createTemplate backend procedure
+- [x] Build updateTemplate backend procedure
+- [x] Build deleteTemplate backend procedure
+- [x] Build getTemplatesByCategory backend procedure
+- [x] Build searchTemplates backend procedure
+- [x] Build downloadTemplate backend procedure (increment counter)
+- [x] Add template management tRPC endpoints
+- [x] Create TemplateManager admin page component
+- [x] Add template upload dialog
+- [x] Add template category selector
+- [x] Add template list with edit/delete
+- [x] Add templates navigation to admin dashboard
+- [x] Create storage upload endpoint
+- [x] Create TemplateLibrary user page component
+- [x] Add category filter
+- [x] Add search functionality
+- [ ] Add template preview (future enhancement)
+- [x] Add download button with counter
+- [x] Add templates navigation to admin dashboard
+- [x] Add templates route for users
+- [x] Test template upload
+- [x] Test template download
+- [x] Test usage statistics

@@ -14,6 +14,8 @@ import ExpiredFiles from "./pages/ExpiredFiles";
 import ArchivedFiles from "./pages/ArchivedFiles";
 import WorkflowTemplateManager from "@/pages/WorkflowTemplateManager";
 import WorkflowAnalytics from "@/pages/WorkflowAnalytics";
+import TemplateManager from "@/pages/TemplateManager";
+import TemplateLibrary from "@/pages/TemplateLibrary";
 
 function Router() {
   return (
@@ -25,7 +27,9 @@ function Router() {
       <Route path={"/expired-files"} component={ExpiredFiles} />
       <Route path={"/archived-files"} component={ArchivedFiles} />
       <Route path="/admin/workflow-templates" component={WorkflowTemplateManager} />
-      <Route path="/admin/workflow-analytics" component={WorkflowAnalytics} />
+        <Route path="/workflow-analytics" component={WorkflowAnalytics} />
+      <Route path="/admin/templates" component={TemplateManager} />
+      <Route path="/templates" component={TemplateLibrary} />
       <Route path={"/search/:query"} component={SearchResults} />
       <Route path={"/search"} component={SearchResults} />
       <Route path={"/share/:token"} component={SharedFile} />

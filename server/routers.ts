@@ -1123,6 +1123,114 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ STORAGE ============
+  storage: router({
+    upload: protectedProcedure
+      .input(z.object({
+        fileKey: z.string(),
+        content: z.string(), // base64
+        contentType: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { storagePut } = await import('./storage');
+        const buffer = Buffer.from(input.content, 'base64');
+        const { url } = await storagePut(input.fileKey, buffer, input.contentType);
+        return { url };
+      }),
+  }),
+
+  // ============ TEMPLATE LIBRARY ============
+  templates: router({
+    // Categories
+    createCategory: adminProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { createTemplateCategory } = await import('./templateManagement');
+        return await createTemplateCategory({
+          name: input.name,
+          description: input.description,
+          createdBy: ctx.user.id,
+        });
+      }),
+
+    getCategories: publicProcedure
+      .query(async () => {
+        const { getAllTemplateCategories } = await import('./templateManagement');
+        return await getAllTemplateCategories();
+      }),
+
+    // Templates
+    createTemplate: adminProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        categoryId: z.number(),
+        fileUrl: z.string(),
+        fileKey: z.string(),
+        fileName: z.string(),
+        mimeType: z.string().optional(),
+        size: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { createFileTemplate } = await import('./templateManagement');
+        return await createFileTemplate({
+          ...input,
+          uploadedBy: ctx.user.id,
+        });
+      }),
+
+    updateTemplate: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        categoryId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { updateFileTemplate } = await import('./templateManagement');
+        const { id, ...data } = input;
+        return await updateFileTemplate(id, data);
+      }),
+
+    deleteTemplate: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deleteFileTemplate } = await import('./templateManagement');
+        return await deleteFileTemplate(input.id);
+      }),
+
+    getByCategory: publicProcedure
+      .input(z.object({ categoryId: z.number().optional() }))
+      .query(async ({ input }) => {
+        const { getTemplatesByCategory } = await import('./templateManagement');
+        return await getTemplatesByCategory(input.categoryId);
+      }),
+
+    search: publicProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const { searchTemplates } = await import('./templateManagement');
+        return await searchTemplates(input.query);
+      }),
+
+    download: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { downloadTemplate } = await import('./templateManagement');
+        return await downloadTemplate(input.id);
+      }),
+
+    getWithCategory: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const { getTemplateWithCategory } = await import('./templateManagement');
+        return await getTemplateWithCategory(input.id);
+      }),
+  }),
+
   // ============ FILE SEARCH ============
   fileSearch: router({
     search: protectedProcedure

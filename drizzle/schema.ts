@@ -20,7 +20,44 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
- * User invitations table for email-based invites
+ * Template categories for organizing file templates
+ */
+export const templateCategories = mysqlTable("template_categories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id),
+});
+
+export type TemplateCategory = typeof templateCategories.$inferSelect;
+export type InsertTemplateCategory = typeof templateCategories.$inferInsert;
+
+/**
+ * File templates library for standard forms, checklists, and protocols
+ */
+export const fileTemplates = mysqlTable("file_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  categoryId: int("categoryId").notNull().references(() => templateCategories.id),
+  fileUrl: text("fileUrl").notNull(),
+  fileKey: varchar("fileKey", { length: 500 }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  mimeType: varchar("mimeType", { length: 100 }),
+  size: int("size").notNull(),
+  version: int("version").default(1).notNull(),
+  downloadCount: int("downloadCount").default(0).notNull(),
+  uploadedBy: int("uploadedBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FileTemplate = typeof fileTemplates.$inferSelect;
+export type InsertFileTemplate = typeof fileTemplates.$inferInsert;
+
+/**
+ * User invitations for email-based invites
  */
 export const userInvitations = mysqlTable("user_invitations", {
   id: int("id").autoincrement().primaryKey(),

@@ -14,8 +14,9 @@ import AuditLogViewer from "@/components/AuditLogViewer";
 import PendingApprovalsWidget from "@/components/PendingApprovalsWidget";
 import ReviewerWorkloadWidget from "@/components/ReviewerWorkloadWidget";
 import WorkflowAnalytics from "@/pages/WorkflowAnalytics";
+import TemplateManager from "@/pages/TemplateManager";
 
-type Tab = "files" | "users" | "audit" | "workflows" | "analytics";
+type Tab = "files" | "users" | "audit" | "workflows" | "analytics" | "templates";
 
 export default function AdminDashboard() {
   const { user, loading, logout } = useAuth();
@@ -145,6 +146,14 @@ export default function AdminDashboard() {
               <Activity className="w-4 h-4" />
               Analytics
             </Button>
+            <Button
+              variant={activeTab === "templates" ? "secondary" : "ghost"}
+              className="gap-2"
+              onClick={() => setActiveTab("templates")}
+            >
+              <Upload className="w-4 h-4" />
+              Template Library
+            </Button>
           </nav>
         </div>
       </div>
@@ -163,6 +172,7 @@ export default function AdminDashboard() {
         {activeTab === "users" && <UserManagement />}
         {activeTab === "audit" && <AuditLogViewer />}
         {activeTab === "analytics" && <WorkflowAnalytics />}
+        {activeTab === "templates" && <TemplateManager />}
         {activeTab === "workflows" && (
           <div className="max-w-6xl mx-auto">
             <Button

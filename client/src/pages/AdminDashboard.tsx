@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search, GitBranch } from "lucide-react";
+import { Loader2, FolderPlus, Upload, Users, Activity, LogOut, Moon, Sun, Home as HomeIcon, Search, GitBranch, Shield } from "lucide-react";
 import { APP_TITLE } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -17,7 +17,7 @@ import WorkflowAnalytics from "@/pages/WorkflowAnalytics";
 import TemplateManager from "@/pages/TemplateManager";
 import TemplateRequestsManager from "@/pages/TemplateRequestsManager";
 
-type Tab = "files" | "users" | "audit" | "workflows" | "analytics" | "templates" | "template-requests";
+type Tab = "files" | "users" | "audit" | "workflows" | "analytics" | "templates" | "template-requests" | "security";
 
 export default function AdminDashboard() {
   const { user, loading, logout } = useAuth();
@@ -160,8 +160,16 @@ export default function AdminDashboard() {
               className="gap-2"
               onClick={() => setActiveTab("template-requests")}
             >
-              <Activity className="w-4 h-4" />
+              <Upload className="w-4 h-4" />
               Template Requests
+            </Button>
+            <Button
+              variant={activeTab === "security" ? "secondary" : "ghost"}
+              className="gap-2"
+              onClick={() => setLocation('/admin/security')}
+            >
+              <Shield className="w-4 h-4" />
+              Security
             </Button>
           </nav>
         </div>
@@ -183,6 +191,7 @@ export default function AdminDashboard() {
         {activeTab === "analytics" && <WorkflowAnalytics />}
         {activeTab === "templates" && <TemplateManager />}
         {activeTab === "template-requests" && <TemplateRequestsManager />}
+        {activeTab === "security" && <div>Redirecting to Security Dashboard...</div>}
         {activeTab === "workflows" && (
           <div className="max-w-6xl mx-auto">
             <Button

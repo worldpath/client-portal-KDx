@@ -878,3 +878,21 @@
 - [x] Document vulnerability remediation workflow
 - [x] Configure SARIF upload for results
 - [x] Set up security alerts integration
+
+## Security Dashboard
+- [x] Create GitHub API integration service
+- [x] Add GitHub token to environment variables
+- [x] Create tRPC router for security metrics
+- [x] Fetch CodeQL alerts from GitHub API
+- [x] Fetch Dependabot alerts from GitHub API
+- [x] Fetch CI/CD workflow status from GitHub API
+- [x] Create SecurityDashboard page component
+- [x] Display CodeQL alert metrics (by severity)
+- [x] Display Dependabot vulnerability count
+- [x] Display CI/CD pipeline status
+- [x] Add security trend charts
+- [x] Add last scan timestamp
+- [x] Add refresh button for manual updates
+- [x] Add security dashboard to admin navigation
+- [x] Add route in App.tsx
+- [x] Style dashboard with cards and charts

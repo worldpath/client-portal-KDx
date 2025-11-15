@@ -2637,6 +2637,65 @@ export const appRouter = router({
         );
       }),
   }),
+
+  // ============ SECURITY DASHBOARD ============
+  security: router({
+    metrics: adminProcedure.query(async () => {
+      const { getSecurityMetrics, isGitHubConfigured } = await import('./githubSecurityService');
+      
+      if (!isGitHubConfigured()) {
+        return {
+          configured: false,
+          message: 'GitHub integration not configured. Set GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO environment variables.',
+        };
+      }
+      
+      const metrics = await getSecurityMetrics();
+      return {
+        configured: true,
+        ...metrics,
+      };
+    }),
+
+    codeqlAlerts: adminProcedure.query(async () => {
+      const { getCodeQLAlerts, isGitHubConfigured } = await import('./githubSecurityService');
+      
+      if (!isGitHubConfigured()) {
+        throw new TRPCError({ 
+          code: 'PRECONDITION_FAILED', 
+          message: 'GitHub integration not configured' 
+        });
+      }
+      
+      return await getCodeQLAlerts();
+    }),
+
+    dependabotAlerts: adminProcedure.query(async () => {
+      const { getDependabotAlerts, isGitHubConfigured } = await import('./githubSecurityService');
+      
+      if (!isGitHubConfigured()) {
+        throw new TRPCError({ 
+          code: 'PRECONDITION_FAILED', 
+          message: 'GitHub integration not configured' 
+        });
+      }
+      
+      return await getDependabotAlerts();
+    }),
+
+    workflowRuns: adminProcedure.query(async () => {
+      const { getWorkflowRuns, isGitHubConfigured } = await import('./githubSecurityService');
+      
+      if (!isGitHubConfigured()) {
+        throw new TRPCError({ 
+          code: 'PRECONDITION_FAILED', 
+          message: 'GitHub integration not configured' 
+        });
+      }
+      
+      return await getWorkflowRuns();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

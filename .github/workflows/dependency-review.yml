@@ -32,9 +32,6 @@ jobs:
           # Comment on PR with results
           comment-summary-in-pr: always
           
-          # Warn on moderate vulnerabilities
-          warn-on-severity: moderate
-          
           # Show vulnerability details
           vulnerability-check: true
           

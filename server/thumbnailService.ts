@@ -1,16 +1,54 @@
 import { fromPath } from 'pdf2pic';
 import { storagePut } from './storage';
+import sharp from 'sharp';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+export interface ThumbnailUrls {
+  small: string;
+  medium: string;
+  large: string;
+}
+
+export interface ThumbnailResult {
+  thumbnailUrls: ThumbnailUrls;
+  thumbnailKeys: {
+    small: string;
+    medium: string;
+    large: string;
+  };
+}
+
 /**
- * Generate a real thumbnail image from a PDF file's first page
+ * Resize image buffer to multiple sizes using sharp
+ */
+async function resizeImage(
+  inputBuffer: Buffer,
+  sizes: { width: number; height: number; suffix: string }[]
+): Promise<{ buffer: Buffer; suffix: string }[]> {
+  const results = await Promise.all(
+    sizes.map(async ({ width, height, suffix }) => {
+      const buffer = await sharp(inputBuffer)
+        .resize(width, height, {
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .png()
+        .toBuffer();
+      return { buffer, suffix };
+    })
+  );
+  return results;
+}
+
+/**
+ * Generate responsive thumbnail images from a PDF file's first page
  */
 export async function generatePdfThumbnail(
   pdfUrl: string,
   fileName: string
-): Promise<{ thumbnailUrl: string; thumbnailKey: string } | null> {
+): Promise<ThumbnailResult | null> {
   const tempDir = os.tmpdir();
   const tempPdfPath = path.join(tempDir, `temp-${Date.now()}-${fileName}`);
   const outputDir = path.join(tempDir, `pdf-output-${Date.now()}`);
@@ -33,14 +71,14 @@ export async function generatePdfThumbnail(
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // Configure pdf2pic to convert first page to PNG
+    // Configure pdf2pic to convert first page to high-res PNG
     const options = {
-      density: 150,           // DPI - higher = better quality but larger file
+      density: 300,           // High DPI for quality
       saveFilename: 'thumbnail',
       savePath: outputDir,
       format: 'png',
-      width: 400,            // Width in pixels
-      height: 520,           // Height in pixels (roughly A4 ratio)
+      width: 1600,           // Large base size
+      height: 2080,          // A4 ratio
     };
 
     const convert = fromPath(tempPdfPath, options);
@@ -53,18 +91,35 @@ export async function generatePdfThumbnail(
       return null;
     }
 
-    // Read the generated image
-    const thumbnailBuffer = fs.readFileSync(result.path);
+    // Read the generated high-res image
+    const highResBuffer = fs.readFileSync(result.path);
 
-    // Upload thumbnail to S3 with long-term caching
-    const thumbnailKey = `thumbnails/${Date.now()}-${fileName.replace(/\.[^/.]+$/, '')}.png`;
-    const uploadResult = await storagePut(
-      thumbnailKey,
-      thumbnailBuffer,
-      {
-        contentType: 'image/png',
-        cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
-      }
+    // Generate three sizes: small (200x260), medium (400x520), large (800x1040)
+    const sizes = [
+      { width: 200, height: 260, suffix: 'small' },
+      { width: 400, height: 520, suffix: 'medium' },
+      { width: 800, height: 1040, suffix: 'large' },
+    ];
+
+    const resizedImages = await resizeImage(highResBuffer, sizes);
+
+    // Upload all sizes to S3 with long-term caching
+    const timestamp = Date.now();
+    const baseKey = `thumbnails/${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}`;
+    
+    const uploadResults = await Promise.all(
+      resizedImages.map(async ({ buffer, suffix }) => {
+        const key = `${baseKey}-${suffix}.png`;
+        const result = await storagePut(
+          key,
+          buffer,
+          {
+            contentType: 'image/png',
+            cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
+          }
+        );
+        return { url: result.url, key, suffix };
+      })
     );
 
     // Clean up temp files
@@ -76,10 +131,20 @@ export async function generatePdfThumbnail(
       console.warn('Failed to clean up temp files:', cleanupError);
     }
 
-    return {
-      thumbnailUrl: uploadResult.url,
-      thumbnailKey,
+    // Organize results by size
+    const thumbnailUrls: ThumbnailUrls = {
+      small: uploadResults.find(r => r.suffix === 'small')!.url,
+      medium: uploadResults.find(r => r.suffix === 'medium')!.url,
+      large: uploadResults.find(r => r.suffix === 'large')!.url,
     };
+
+    const thumbnailKeys = {
+      small: uploadResults.find(r => r.suffix === 'small')!.key,
+      medium: uploadResults.find(r => r.suffix === 'medium')!.key,
+      large: uploadResults.find(r => r.suffix === 'large')!.key,
+    };
+
+    return { thumbnailUrls, thumbnailKeys };
   } catch (error) {
     console.error('Error generating PDF thumbnail:', error);
     
@@ -100,30 +165,51 @@ export async function generatePdfThumbnail(
 }
 
 /**
- * Generate thumbnail for Word documents
- * For Word docs, we create a placeholder since direct rendering requires complex conversion
+ * Generate responsive thumbnail for Word documents
  */
 export async function generateWordThumbnail(
   fileName: string
-): Promise<{ thumbnailUrl: string; thumbnailKey: string } | null> {
+): Promise<ThumbnailResult | null> {
   try {
-    const thumbnailSvg = createWordPlaceholderSvg(fileName);
-    
-    // Upload thumbnail to S3 with long-term caching
-    const thumbnailKey = `thumbnails/${Date.now()}-${fileName.replace(/\.[^/.]+$/, '')}.svg`;
-    const uploadResult = await storagePut(
-      thumbnailKey,
-      Buffer.from(thumbnailSvg),
-      {
-        contentType: 'image/svg+xml',
-        cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
-      }
+    // Generate SVG placeholders at different sizes
+    const sizes = [
+      { width: 200, height: 260, suffix: 'small' },
+      { width: 400, height: 520, suffix: 'medium' },
+      { width: 800, height: 1040, suffix: 'large' },
+    ];
+
+    const timestamp = Date.now();
+    const baseKey = `thumbnails/${timestamp}-${fileName.replace(/\.[^/.]+$/, '')}`;
+
+    const uploadResults = await Promise.all(
+      sizes.map(async ({ width, height, suffix }) => {
+        const svg = createWordPlaceholderSvg(fileName, width, height);
+        const key = `${baseKey}-${suffix}.svg`;
+        const result = await storagePut(
+          key,
+          Buffer.from(svg),
+          {
+            contentType: 'image/svg+xml',
+            cacheControl: 'public, max-age=31536000, immutable' // 1 year cache
+          }
+        );
+        return { url: result.url, key, suffix };
+      })
     );
 
-    return {
-      thumbnailUrl: uploadResult.url,
-      thumbnailKey,
+    const thumbnailUrls: ThumbnailUrls = {
+      small: uploadResults.find(r => r.suffix === 'small')!.url,
+      medium: uploadResults.find(r => r.suffix === 'medium')!.url,
+      large: uploadResults.find(r => r.suffix === 'large')!.url,
     };
+
+    const thumbnailKeys = {
+      small: uploadResults.find(r => r.suffix === 'small')!.key,
+      medium: uploadResults.find(r => r.suffix === 'medium')!.key,
+      large: uploadResults.find(r => r.suffix === 'large')!.key,
+    };
+
+    return { thumbnailUrls, thumbnailKeys };
   } catch (error) {
     console.error('Error generating Word thumbnail:', error);
     return null;
@@ -133,33 +219,33 @@ export async function generateWordThumbnail(
 /**
  * Create an SVG placeholder for Word documents
  */
-function createWordPlaceholderSvg(fileName: string): string {
-  const thumbnailWidth = 200;
-  const thumbnailHeight = 260;
+function createWordPlaceholderSvg(fileName: string, width: number, height: number): string {
+  const fontSize = Math.floor(width * 0.3);
+  const labelFontSize = Math.floor(width * 0.05);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${thumbnailWidth}" height="${thumbnailHeight}" xmlns="http://www.w3.org/2000/svg">
+<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="wordGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <linearGradient id="wordGrad-${width}" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#2b579a;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#1e3a5f;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="100%" height="100%" fill="url(#wordGrad)" rx="4"/>
-  <g transform="translate(${thumbnailWidth / 2}, ${thumbnailHeight / 2 - 20})">
+  <rect width="100%" height="100%" fill="url(#wordGrad-${width})" rx="4"/>
+  <g transform="translate(${width / 2}, ${height / 2 - fontSize / 2})">
     <text x="0" y="0" 
           text-anchor="middle" 
           font-family="Arial, sans-serif" 
-          font-size="60" 
+          font-size="${fontSize}" 
           font-weight="bold"
           fill="white">
       W
     </text>
   </g>
-  <text x="50%" y="${thumbnailHeight - 15}" 
+  <text x="50%" y="${height - labelFontSize * 1.5}" 
         text-anchor="middle" 
         font-family="Arial, sans-serif" 
-        font-size="10" 
+        font-size="${labelFontSize}" 
         fill="white">
     Word Document
   </text>
@@ -167,13 +253,13 @@ function createWordPlaceholderSvg(fileName: string): string {
 }
 
 /**
- * Generate thumbnail based on file type
+ * Generate responsive thumbnails based on file type
  */
 export async function generateThumbnail(
   fileUrl: string,
   fileName: string,
   mimeType: string | null
-): Promise<{ thumbnailUrl: string; thumbnailKey: string } | null> {
+): Promise<ThumbnailResult | null> {
   if (!mimeType) {
     return null;
   }

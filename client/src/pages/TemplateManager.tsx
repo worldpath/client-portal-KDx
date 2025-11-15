@@ -202,10 +202,12 @@ export default function TemplateManager() {
                     className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {template.thumbnailUrl ? (
+                      {template.thumbnailUrlMedium ? (
                         <div className="w-12 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
                           <img 
-                            src={template.thumbnailUrl} 
+                            src={template.thumbnailUrlMedium} 
+                            srcSet={`${template.thumbnailUrlSmall} 200w, ${template.thumbnailUrlMedium} 400w, ${template.thumbnailUrlLarge} 800w`}
+                            sizes="48px"
                             alt={template.name}
                             loading="lazy"
                             decoding="async"

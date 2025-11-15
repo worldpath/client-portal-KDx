@@ -35,10 +35,14 @@ export async function regenerateTemplateThumbnail(templateId: number): Promise<b
     return false;
   }
 
-  // Update template with new thumbnail
+  // Update template with new thumbnails
   await db
     .update(fileTemplates)
-    .set({ thumbnailUrl: thumbnail.thumbnailUrl })
+    .set({
+      thumbnailUrlSmall: thumbnail.thumbnailUrls.small,
+      thumbnailUrlMedium: thumbnail.thumbnailUrls.medium,
+      thumbnailUrlLarge: thumbnail.thumbnailUrls.large,
+    })
     .where(eq(fileTemplates.id, templateId));
 
   return true;
@@ -71,10 +75,14 @@ export async function regenerateAllThumbnails(): Promise<{
       );
 
       if (thumbnail) {
-        // Update template with new thumbnail
+        // Update template with new thumbnails
         await db
           .update(fileTemplates)
-          .set({ thumbnailUrl: thumbnail.thumbnailUrl })
+          .set({
+            thumbnailUrlSmall: thumbnail.thumbnailUrls.small,
+            thumbnailUrlMedium: thumbnail.thumbnailUrls.medium,
+            thumbnailUrlLarge: thumbnail.thumbnailUrls.large,
+          })
           .where(eq(fileTemplates.id, template.id));
         
         success++;
@@ -110,7 +118,7 @@ export async function regenerateSvgThumbnails(): Promise<{
   // Get all templates with SVG thumbnails or no thumbnails
   const allTemplates = await db.select().from(fileTemplates);
   const templatesNeedingRegen = allTemplates.filter(
-    t => !t.thumbnailUrl || t.thumbnailUrl.endsWith('.svg')
+    t => !t.thumbnailUrlMedium || t.thumbnailUrlMedium.endsWith('.svg')
   );
 
   let success = 0;
@@ -132,7 +140,11 @@ export async function regenerateSvgThumbnails(): Promise<{
       if (thumbnail) {
         await db
           .update(fileTemplates)
-          .set({ thumbnailUrl: thumbnail.thumbnailUrl })
+          .set({
+            thumbnailUrlSmall: thumbnail.thumbnailUrls.small,
+            thumbnailUrlMedium: thumbnail.thumbnailUrls.medium,
+            thumbnailUrlLarge: thumbnail.thumbnailUrls.large,
+          })
           .where(eq(fileTemplates.id, template.id));
         
         success++;

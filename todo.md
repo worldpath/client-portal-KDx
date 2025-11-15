@@ -785,3 +785,16 @@
 - [ ] Add srcset for responsive thumbnail sizes
 - [ ] Test browser caching behavior with DevTools
 - [ ] Measure performance improvements (load time, bandwidth)
+
+## Responsive Thumbnail Sizes
+- [x] Install sharp for image resizing and optimization
+- [x] Generate small thumbnail (200x260px) for mobile devices
+- [x] Generate medium thumbnail (400x520px) for standard displays
+- [x] Generate large thumbnail (800x1040px) for retina displays
+- [x] Update database schema to store thumbnailUrlSmall, thumbnailUrlMedium, thumbnailUrlLarge
+- [x] Upload all three sizes to S3 with cache headers
+- [x] Update TemplateLibrary to use srcset with responsive sizes
+- [x] Update TemplateManager to use srcset with responsive sizes
+- [x] Add sizes attribute for proper image selection
+- [ ] Test on mobile, tablet, desktop, and retina displays
+- [ ] Measure bandwidth savings on different devices

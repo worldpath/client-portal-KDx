@@ -151,10 +151,12 @@ export default function TemplateLibrary() {
                   <Card key={template.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between gap-2">
-                        {template.thumbnailUrl ? (
+                        {template.thumbnailUrlMedium ? (
                           <div className="w-16 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
                             <img 
-                              src={template.thumbnailUrl} 
+                              src={template.thumbnailUrlMedium} 
+                              srcSet={`${template.thumbnailUrlSmall} 200w, ${template.thumbnailUrlMedium} 400w, ${template.thumbnailUrlLarge} 800w`}
+                              sizes="64px"
                               alt={template.name}
                               loading="lazy"
                               decoding="async"

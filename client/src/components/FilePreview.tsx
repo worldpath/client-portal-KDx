@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Edit, Save, X, MessageSquare, GitBranch, Clock } from "lucide-react";
+import { Loader2, Edit, Save, X, MessageSquare, GitBranch, Clock, GitCompare } from "lucide-react";
+import FileComparisonViewer from "@/components/FileComparisonViewer";
 import { toast } from "sonner";
 import FileComments from "@/components/FileComments";
 import { WorkflowManager } from "@/components/WorkflowManager";
@@ -48,6 +49,7 @@ export default function FilePreview({
   const [editContent, setEditContent] = useState("");
   const [originalContent, setOriginalContent] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -115,6 +117,7 @@ export default function FilePreview({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
@@ -138,7 +141,7 @@ export default function FilePreview({
         </DialogHeader>
 
         <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="w-4 h-4 mr-2" />
@@ -154,6 +157,10 @@ export default function FilePreview({
             </TabsTrigger>
             <TabsTrigger value="versions">
               Versions
+            </TabsTrigger>
+            <TabsTrigger value="compare">
+              <GitCompare className="w-4 h-4 mr-2" />
+              Compare
             </TabsTrigger>
           </TabsList>
 
@@ -245,6 +252,10 @@ export default function FilePreview({
           <TabsContent value="versions" className="flex-1 overflow-auto mt-4">
             <FileVersionComparison fileId={fileId} />
           </TabsContent>
+
+          <TabsContent value="compare" className="flex-1 overflow-auto mt-4">
+            <CompareVersionsTab fileId={fileId} onOpenFullScreen={() => setShowComparison(true)} />
+          </TabsContent>
         </Tabs>
 
         <DialogFooter>
@@ -271,5 +282,91 @@ export default function FilePreview({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {showComparison && (
+      <CompareVersionsFullScreen
+        fileId={fileId}
+        onClose={() => setShowComparison(false)}
+      />
+    )}
+  </>
+  );
+}
+
+// Compare versions tab component
+function CompareVersionsTab({
+  fileId,
+  onOpenFullScreen,
+}: {
+  fileId: number;
+  onOpenFullScreen: () => void;
+}) {
+  const { data: versions, isLoading } = trpc.files.getVersions.useQuery({ fileId });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!versions || versions.length < 2) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        At least 2 versions are required to compare
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Select two versions to compare their differences
+        </p>
+        <Button onClick={onOpenFullScreen}>
+          <GitCompare className="w-4 h-4 mr-2" />
+          Open Full Screen
+        </Button>
+      </div>
+      <div className="text-sm text-muted-foreground">
+        Click "Open Full Screen" to start comparing versions side-by-side
+      </div>
+    </div>
+  );
+}
+
+// Full screen comparison wrapper
+function CompareVersionsFullScreen({
+  fileId,
+  onClose,
+}: {
+  fileId: number;
+  onClose: () => void;
+}) {
+  const { data: versions, isLoading } = trpc.files.getVersions.useQuery({ fileId });
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!versions || versions.length < 2) {
+    return null;
+  }
+
+  return (
+    <FileComparisonViewer
+      fileId={fileId}
+      versions={versions.map(v => ({
+        versionNumber: v.versionNumber,
+        createdAt: v.createdAt,
+        uploadedBy: 'User', // TODO: Get actual user name
+      }))}
+      onClose={onClose}
+    />
   );
 }

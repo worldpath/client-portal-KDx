@@ -656,3 +656,22 @@
 - [x] Add audit logging for edit/delete actions
 - [x] Test 15-minute window enforcement
 - [x] Test edit/delete permissions
+
+## File Comparison Tool
+- [x] Build text extraction backend for PDFs
+- [x] Build text extraction backend for Word documents
+- [x] Create diff algorithm for line-by-line comparison
+- [x] Build compareVersions backend procedure
+- [x] Add tRPC endpoint for version comparison
+- [x] Fix duplicate router names
+- [x] Create FileComparisonViewer component
+- [x] Add side-by-side layout with synchronized scrolling
+- [x] Implement color-coded highlighting (green=added, red=deleted, yellow=modified)
+- [x] Add version selector dropdown
+- [x] Add navigation controls to jump between changes
+- [x] Show change statistics (lines added/removed/modified)
+- [x] Add "Compare Versions" button to file preview
+- [x] Add comparison option to version history
+- [x] Test PDF comparison
+- [x] Test document comparison
+- [x] Test large file handling

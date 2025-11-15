@@ -24,7 +24,7 @@ export default function SearchResults() {
   const [activeQuery, setActiveQuery] = useState(initialQuery);
 
   // Fetch search results
-  const { data: results = [], isLoading } = trpc.search.files.useQuery(
+  const { data: results = [], isLoading } = trpc.fileSearch.search.useQuery(
     { query: activeQuery },
     { enabled: activeQuery.length > 0 }
   );

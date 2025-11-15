@@ -1096,9 +1096,36 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ SEARCH ============
-  search: router({
-    files: protectedProcedure
+    // ============ FILE COMPARISON ============
+  fileComparison: router({
+    compareVersions: protectedProcedure
+      .input(z.object({
+        fileId: z.number(),
+        oldVersionNumber: z.number(),
+        newVersionNumber: z.number(),
+      }))
+      .query(async ({ input, ctx }) => {
+        const file = await db.getFileById(input.fileId);
+        if (!file) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'File not found' });
+        }
+
+        // Check permission
+        if (ctx.user.role === 'client') {
+          const permission = await db.getFolderPermission(file.folderId, ctx.user.id);
+          if (!permission || !permission.canView) {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+          }
+        }
+
+        const { compareFileVersions } = await import('./fileComparison');
+        return await compareFileVersions(input.fileId, input.oldVersionNumber, input.newVersionNumber);
+      }),
+  }),
+
+  // ============ FILE SEARCH ============
+  fileSearch: router({
+    search: protectedProcedure
       .input(z.object({
         query: z.string().min(1),
       }))

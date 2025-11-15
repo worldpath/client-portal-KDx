@@ -913,3 +913,19 @@
 - [x] Mask token in UI (show only last 4 characters)
 - [x] Add settings page to admin navigation
 - [x] Update githubSecurityService to use database settings
+
+## System Health Check Dashboard
+- [x] Create health check service for GitHub integration
+- [x] Create health check service for S3 storage
+- [x] Create health check service for database connection
+- [x] Create health check service for OAuth integration
+- [x] Add response time measurement for each service
+- [x] Create tRPC health check endpoints
+- [x] Create SystemHealthDashboard component
+- [x] Display status indicators (healthy, warning, error)
+- [x] Show last check timestamp
+- [x] Add manual refresh button
+- [x] Add auto-refresh every 30 seconds
+- [x] Show troubleshooting recommendations for failures
+- [x] Add health dashboard to admin settings page
+- [x] Style with status colors (green, yellow, red)

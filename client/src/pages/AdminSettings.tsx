@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import GitHubSettingsCard from "@/components/GitHubSettingsCard";
+import SystemHealthCard from "@/components/SystemHealthCard";
 
 /**
  * Admin Settings Page
@@ -109,6 +110,8 @@ export default function AdminSettings() {
           </div>
 
           <div className="space-y-6">
+            <SystemHealthCard />
+            
             <GitHubSettingsCard />
 
             {/* Future settings sections can be added here */}

@@ -2736,6 +2736,14 @@ export const appRouter = router({
         return await testGitHubConnection(input.token, input.owner, input.repo);
       }),
   }),
+
+  // System Health Checks
+  health: router({
+    checkSystem: adminProcedure.query(async () => {
+      const { checkSystemHealth } = await import('./systemHealthService');
+      return await checkSystemHealth();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

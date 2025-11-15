@@ -13,7 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, FileText, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { FileText, CheckCircle, XCircle, Clock } from "lucide-react";
+import { CreateTemplateFromRequest } from "@/components/CreateTemplateFromRequest";
 import { toast } from "sonner";
 
 export default function TemplateRequestsManager() {
@@ -88,7 +89,9 @@ export default function TemplateRequestsManager() {
     }
   };
 
-  const renderRequestCard = (request: any, showActions = false) => (
+  const [createTemplateRequest, setCreateTemplateRequest] = useState<any>(null);
+
+  const renderRequestCard = (request: any, showActions = false, showCreateTemplate = false) => (
     <Card key={request.id}>
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
@@ -123,6 +126,19 @@ export default function TemplateRequestsManager() {
           <div className="border-t pt-3">
             <p className="text-sm font-medium mb-1">Admin Comment:</p>
             <p className="text-sm text-muted-foreground">{request.adminComment}</p>
+          </div>
+        )}
+        {showCreateTemplate && (
+          <div className="flex gap-2 pt-3 border-t">
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setCreateTemplateRequest(request)}
+              className="flex-1"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Create Template
+            </Button>
           </div>
         )}
         {showActions && (
@@ -205,7 +221,7 @@ export default function TemplateRequestsManager() {
               </CardContent>
             </Card>
           ) : (
-            approvedRequests.map((request) => renderRequestCard(request))
+            approvedRequests.map((request) => renderRequestCard(request, false, true))
           )}
         </TabsContent>
 
@@ -289,6 +305,18 @@ export default function TemplateRequestsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {createTemplateRequest && (
+        <CreateTemplateFromRequest
+          request={createTemplateRequest}
+          open={!!createTemplateRequest}
+          onOpenChange={(open) => !open && setCreateTemplateRequest(null)}
+          onSuccess={() => {
+            setCreateTemplateRequest(null);
+            approvedRefetch();
+          }}
+        />
+      )}
     </div>
   );
 }

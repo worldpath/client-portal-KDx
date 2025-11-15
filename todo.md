@@ -741,3 +741,10 @@
 - [x] Test request submission
 - [x] Test approval workflow
 - [x] Test rejection workflow
+
+## Create Template from Approved Request
+- [x] Add createdFromRequestId field to file_templates table
+- [x] Add "Create Template" button to approved requests
+- [x] Implement pre-filled template upload dialog
+- [x] Link created template back to request (via createdFromRequestId)
+- [x] Test template creation from request

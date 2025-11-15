@@ -11,7 +11,6 @@ export async function uploadNewTemplateVersion(params: {
   fileKey: string;
   fileName: string;
   mimeType: string | null;
-  size: number;
   uploadedBy: number;
   changeNotes?: string;
 }): Promise<{ id: number; versionNumber: number }> {
@@ -44,7 +43,6 @@ export async function uploadNewTemplateVersion(params: {
     fileKey: params.fileKey,
     fileName: params.fileName,
     mimeType: params.mimeType,
-    size: params.size,
     downloadCount: 0,
     isLatest: 1,
     uploadedBy: params.uploadedBy,

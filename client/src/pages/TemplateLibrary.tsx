@@ -185,7 +185,6 @@ export default function TemplateLibrary() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{formatFileSize(template.size)}</span>
                         <span>{template.downloadCount} downloads</span>
                       </div>
                     </CardContent>

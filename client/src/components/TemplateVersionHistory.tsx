@@ -121,7 +121,6 @@ export default function TemplateVersionHistory({
                       <div>
                         Uploaded {formatDistanceToNow(new Date(version.createdAt), { addSuffix: true })}
                       </div>
-                      <div>{formatFileSize(version.size)}</div>
                       <div>{version.downloadCount} downloads</div>
                       {version.changeNotes && (
                         <div className="mt-2 p-2 bg-muted rounded text-foreground">

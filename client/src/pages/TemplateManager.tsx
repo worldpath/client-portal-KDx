@@ -103,7 +103,6 @@ export default function TemplateManager() {
         fileKey: uploadResult.key,
         fileName: data.file.name,
         mimeType: data.file.type || null,
-        size: data.file.size,
         changeNotes: data.changeNotes,
       });
     } catch (error) {
@@ -215,8 +214,6 @@ export default function TemplateManager() {
                         )}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                           <span>{category?.name}</span>
-                          <span>•</span>
-                          <span>{formatFileSize(template.size)}</span>
                           <span>•</span>
                           <span>{template.downloadCount} downloads</span>
                         </div>
@@ -413,10 +410,9 @@ function UploadTemplateDialog({
         description: description || undefined,
         categoryId: parseInt(categoryId),
         fileUrl: url,
-        fileKey,
-        fileName: file.name,
-        mimeType: file.type,
-        size: file.size,
+      fileKey,
+      fileName: file.name,
+      mimeType: file.type,
       });
 
       // Reset form

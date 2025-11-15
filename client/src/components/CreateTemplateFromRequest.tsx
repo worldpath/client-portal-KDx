@@ -70,6 +70,7 @@ export function CreateTemplateFromRequest({
         categoryId: parseInt(categoryId),
         fileUrl: uploadResult.url,
         fileKey,
+        fileName: file.name,
         mimeType: file.type,
         createdFromRequestId: request.id,
       });

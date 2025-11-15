@@ -43,8 +43,8 @@ export async function createFileTemplate(data: {
   fileKey: string;
   fileName: string;
   mimeType?: string;
-  size: number;
   uploadedBy: number;
+  createdFromRequestId?: number;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -57,10 +57,9 @@ export async function createFileTemplate(data: {
     fileKey: data.fileKey,
     fileName: data.fileName,
     mimeType: data.mimeType || null,
-    size: data.size,
-    version: 1,
     downloadCount: 0,
-    uploadedBy: data.uploadedBy,
+    createdBy: data.uploadedBy,
+    createdFromRequestId: data.createdFromRequestId || null,
   });
 
   return { id: Number((result as any).insertId) };

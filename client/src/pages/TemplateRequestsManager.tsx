@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, CheckCircle, XCircle, Clock } from "lucide-react";
+import { FileText, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { CreateTemplateFromRequest } from "@/components/CreateTemplateFromRequest";
 import { toast } from "sonner";
 
@@ -149,7 +149,7 @@ export default function TemplateRequestsManager() {
               onClick={() => handleApprove(request.id)}
               className="flex-1"
             >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
+              <CheckCircle className="w-4 h-4 mr-2" />
               Approve
             </Button>
             <Button
@@ -313,7 +313,7 @@ export default function TemplateRequestsManager() {
           onOpenChange={(open) => !open && setCreateTemplateRequest(null)}
           onSuccess={() => {
             setCreateTemplateRequest(null);
-            approvedRefetch();
+            utils.templates.getRequests.invalidate();
           }}
         />
       )}

@@ -1172,7 +1172,7 @@ export const appRouter = router({
         fileKey: z.string(),
         fileName: z.string(),
         mimeType: z.string().optional(),
-        size: z.number(),
+        createdFromRequestId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const { createFileTemplate } = await import('./templateManagement');
@@ -1230,7 +1230,6 @@ export const appRouter = router({
         fileKey: z.string(),
         fileName: z.string(),
         mimeType: z.string().nullable(),
-        size: z.number(),
         changeNotes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {

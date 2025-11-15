@@ -1223,6 +1223,63 @@ export const appRouter = router({
         return await downloadTemplate(input.id);
       }),
 
+    uploadVersion: adminProcedure
+      .input(z.object({
+        templateId: z.number(),
+        fileUrl: z.string(),
+        fileKey: z.string(),
+        fileName: z.string(),
+        mimeType: z.string().nullable(),
+        size: z.number(),
+        changeNotes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { uploadNewTemplateVersion } = await import('./templateVersions');
+        return await uploadNewTemplateVersion({
+          ...input,
+          uploadedBy: ctx.user.id,
+        });
+      }),
+
+    getVersionHistory: protectedProcedure
+      .input(z.object({ templateId: z.number() }))
+      .query(async ({ input }) => {
+        const { getTemplateVersionHistory } = await import('./templateVersions');
+        return await getTemplateVersionHistory(input.templateId);
+      }),
+
+    setLatestVersion: adminProcedure
+      .input(z.object({
+        templateId: z.number(),
+        versionId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { setLatestTemplateVersion } = await import('./templateVersions');
+        await setLatestTemplateVersion({
+          ...input,
+          userId: ctx.user.id,
+        });
+        return { success: true };
+      }),
+
+    downloadVersion: protectedProcedure
+      .input(z.object({ versionId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { incrementVersionDownloadCount } = await import('./templateVersions');
+        const { templateVersions } = await import('../drizzle/schema');
+        const { getDb } = await import('./db');
+        const { eq } = await import('drizzle-orm');
+        await incrementVersionDownloadCount(input.versionId);
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const version = await db.select().from(templateVersions).where(eq(templateVersions.id, input.versionId)).limit(1);
+        if (version.length === 0) throw new Error("Version not found");
+        return {
+          fileUrl: version[0].fileUrl,
+          fileName: version[0].fileName,
+        };
+      }),
+
     getWithCategory: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {

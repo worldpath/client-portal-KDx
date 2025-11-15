@@ -1,0 +1,1 @@
+ALTER TABLE `template_versions` MODIFY COLUMN `isLatest` int NOT NULL DEFAULT 1;

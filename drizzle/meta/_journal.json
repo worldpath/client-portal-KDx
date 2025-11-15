@@ -141,6 +141,20 @@
       "when": 1763179577432,
       "tag": "0019_old_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1763204067311,
+      "tag": "0020_solid_vivisector",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1763204093164,
+      "tag": "0021_living_donald_blake",
+      "breakpoints": true
     }
   ]
 }

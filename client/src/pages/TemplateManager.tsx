@@ -16,11 +16,14 @@ import {
 import { Loader2, Plus, Edit, Trash2, Upload, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 import { storagePut } from "@/lib/storage";
+import TemplateVersionHistory from "@/components/TemplateVersionHistory";
+import UploadVersionDialog from "@/components/UploadVersionDialog";
 
 export default function TemplateManager() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [versionUploadDialogOpen, setVersionUploadDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
   const utils = trpc.useUtils();
@@ -76,6 +79,37 @@ export default function TemplateManager() {
       toast.error(error.message || "Failed to delete template");
     },
   });
+
+  const uploadVersionMutation = trpc.templates.uploadVersion.useMutation({
+    onSuccess: () => {
+      toast.success("New version uploaded successfully");
+      setVersionUploadDialogOpen(false);
+      utils.templates.getByCategory.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to upload version");
+    },
+  });
+
+  const handleUploadVersion = async (data: { file: File; changeNotes: string }) => {
+    if (!selectedTemplate) return;
+
+    try {
+      const fileKey = `templates/${selectedTemplate.id}/v${Date.now()}-${data.file.name}`;
+      const uploadResult = await storagePut(fileKey, data.file, data.file.type);
+      uploadVersionMutation.mutate({
+        templateId: selectedTemplate.id,
+        fileUrl: uploadResult.url,
+        fileKey: uploadResult.key,
+        fileName: data.file.name,
+        mimeType: data.file.type || null,
+        size: data.file.size,
+        changeNotes: data.changeNotes,
+      });
+    } catch (error) {
+      toast.error("Failed to upload file");
+    }
+  };
 
   const handleDeleteTemplate = (templateId: number) => {
     if (confirm("Are you sure you want to delete this template?")) {
@@ -188,7 +222,23 @@ export default function TemplateManager() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <TemplateVersionHistory
+                        templateId={template.id}
+                        templateName={template.name}
+                        isAdmin={true}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedTemplate(template);
+                          setVersionUploadDialogOpen(true);
+                        }}
+                      >
+                        <Upload className="w-4 h-4 mr-1" />
+                        New Version
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -241,6 +291,17 @@ export default function TemplateManager() {
           categories={categories}
           onSubmit={(data) => updateTemplateMutation.mutate({ id: selectedTemplate.id, ...data })}
           isLoading={updateTemplateMutation.isPending}
+        />
+      )}
+
+      {/* Upload Version Dialog */}
+      {selectedTemplate && (
+        <UploadVersionDialog
+          open={versionUploadDialogOpen}
+          onOpenChange={setVersionUploadDialogOpen}
+          templateName={selectedTemplate.name}
+          onSubmit={handleUploadVersion}
+          isLoading={uploadVersionMutation.isPending}
         />
       )}
     </div>

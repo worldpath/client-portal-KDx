@@ -703,3 +703,19 @@
 - [x] Test template upload
 - [x] Test template download
 - [x] Test usage statistics
+
+## Template Version Management
+- [x] Create template_versions table for version history
+- [x] Add isLatest flag to track current version
+- [x] Update file_templates to reference template_versions
+- [x] Build uploadNewVersion backend procedure
+- [x] Build getTemplateVersions backend procedure
+- [x] Build setLatestVersion backend procedure (rollback)
+- [x] Add version management tRPC endpoi- [x] Add "Upload New Version" button to TemplateManager
+- [x] Create version history dialog component
+- [x] Add version selector to TemplateLibrary (via version history dialog)
+- [x] Show version number and upload date in UI
+- [x] Test version upload
+- [x] Test version download
+- [x] Test version rollback
+- [x] Test version history display

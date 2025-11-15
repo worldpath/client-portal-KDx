@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, FileText, Download, Search } from "lucide-react";
 import { toast } from "sonner";
+import TemplateVersionHistory from "@/components/TemplateVersionHistory";
 
 export default function TemplateLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,20 +150,27 @@ export default function TemplateLibrary() {
                         <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <FileText className="w-6 h-6 text-primary" />
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleDownload(template.id)}
-                          disabled={downloadMutation.isPending}
-                        >
-                          {downloadMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Download className="w-4 h-4 mr-1" />
-                              Download
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <TemplateVersionHistory
+                            templateId={template.id}
+                            templateName={template.name}
+                            isAdmin={false}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleDownload(template.id)}
+                            disabled={downloadMutation.isPending}
+                          >
+                            {downloadMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4 mr-1" />
+                                Download Latest
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       <CardTitle className="text-lg mt-3">{template.name}</CardTitle>
                       {template.description && (

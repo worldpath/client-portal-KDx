@@ -57,6 +57,28 @@ export type FileTemplate = typeof fileTemplates.$inferSelect;
 export type InsertFileTemplate = typeof fileTemplates.$inferInsert;
 
 /**
+ * Template versions for tracking version history
+ */
+export const templateVersions = mysqlTable("template_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId").notNull().references(() => fileTemplates.id, { onDelete: 'cascade' }),
+  versionNumber: int("versionNumber").notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileKey: varchar("fileKey", { length: 500 }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  mimeType: varchar("mimeType", { length: 100 }),
+  size: int("size").notNull(),
+  downloadCount: int("downloadCount").default(0).notNull(),
+  isLatest: int("isLatest").default(1).notNull(),
+  uploadedBy: int("uploadedBy").notNull().references(() => users.id),
+  changeNotes: text("changeNotes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TemplateVersion = typeof templateVersions.$inferSelect;
+export type InsertTemplateVersion = typeof templateVersions.$inferInsert;
+
+/**
  * User invitations for email-based invites
  */
 export const userInvitations = mysqlTable("user_invitations", {

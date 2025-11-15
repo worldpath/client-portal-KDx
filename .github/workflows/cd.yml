@@ -1,0 +1,109 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy to production
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh $DEPLOY_USER@$DEPLOY_HOST << 'ENDSSH'
+            set -e
+            
+            echo "========================================="
+            echo "Starting deployment to production"
+            echo "========================================="
+            
+            # Navigate to application directory
+            cd ${{ secrets.DEPLOY_PATH }}
+            
+            # Pull latest changes
+            echo "→ Pulling latest changes from repository..."
+            git pull origin main
+            
+            # Install dependencies
+            echo "→ Installing dependencies..."
+            pnpm install --frozen-lockfile
+            
+            # Build client
+            echo "→ Building client application..."
+            cd client
+            pnpm build
+            cd ..
+            
+            # Run database migrations
+            echo "→ Running database migrations..."
+            pnpm db:push || echo "No migrations needed"
+            
+            # Restart application with PM2
+            echo "→ Restarting application..."
+            pm2 restart kdx-portal
+            
+            # Wait for application to start
+            echo "→ Waiting for application to start..."
+            sleep 5
+            
+            # Check application status
+            echo "→ Checking application status..."
+            pm2 list
+            
+            # Test health endpoint
+            echo "→ Testing health endpoint..."
+            curl -f http://localhost:3000/health || exit 1
+            
+            echo ""
+            echo "✓ Deployment completed successfully!"
+            echo ""
+          ENDSSH
+      
+      - name: Verify deployment
+        run: |
+          echo "→ Verifying production deployment..."
+          curl -f https://worldpathregulatory.world/health || exit 1
+          echo "✓ Production site is healthy!"
+      
+      - name: Send deployment notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "Deployment ${{ job.status }}: KDx Portal"
+          to: bryanra@worldpathregulatory.com
+          from: GitHub Actions <noreply@github.com>
+          body: |
+            Deployment to production has ${{ job.status }}!
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            
+            View workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true

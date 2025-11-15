@@ -1,0 +1,121 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to rollback to (leave empty for previous commit)'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Rollback deployment
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ROLLBACK_SHA: ${{ github.event.inputs.commit_sha }}
+        run: |
+          ssh $DEPLOY_USER@$DEPLOY_HOST << 'ENDSSH'
+            set -e
+            
+            echo "========================================="
+            echo "Starting rollback procedure"
+            echo "========================================="
+            
+            # Navigate to application directory
+            cd ${{ secrets.DEPLOY_PATH }}
+            
+            # Determine rollback target
+            if [ -n "${{ github.event.inputs.commit_sha }}" ]; then
+              ROLLBACK_TARGET="${{ github.event.inputs.commit_sha }}"
+              echo "→ Rolling back to specific commit: $ROLLBACK_TARGET"
+            else
+              ROLLBACK_TARGET="HEAD~1"
+              echo "→ Rolling back to previous commit"
+            fi
+            
+            # Show current commit
+            echo "Current commit:"
+            git log -1 --oneline
+            
+            # Rollback to target commit
+            echo "→ Rolling back repository..."
+            git reset --hard $ROLLBACK_TARGET
+            
+            echo "Rolled back to:"
+            git log -1 --oneline
+            
+            # Install dependencies
+            echo "→ Installing dependencies..."
+            pnpm install --frozen-lockfile
+            
+            # Build client
+            echo "→ Building client application..."
+            cd client
+            pnpm build
+            cd ..
+            
+            # Restart application
+            echo "→ Restarting application..."
+            pm2 restart kdx-portal
+            
+            # Wait for application to start
+            echo "→ Waiting for application to start..."
+            sleep 5
+            
+            # Check application status
+            echo "→ Checking application status..."
+            pm2 list
+            
+            # Test health endpoint
+            echo "→ Testing health endpoint..."
+            curl -f http://localhost:3000/health || exit 1
+            
+            echo ""
+            echo "✓ Rollback completed successfully!"
+            echo ""
+          ENDSSH
+      
+      - name: Verify rollback
+        run: |
+          echo "→ Verifying production site after rollback..."
+          curl -f https://worldpathregulatory.world/health || exit 1
+          echo "✓ Production site is healthy after rollback!"
+      
+      - name: Send rollback notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: "Rollback ${{ job.status }}: KDx Portal"
+          to: bryanra@worldpathregulatory.com
+          from: GitHub Actions <noreply@github.com>
+          body: |
+            Rollback procedure has ${{ job.status }}!
+            
+            Repository: ${{ github.repository }}
+            Target: ${{ github.event.inputs.commit_sha || 'Previous commit (HEAD~1)' }}
+            Triggered by: ${{ github.actor }}
+            
+            View workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true

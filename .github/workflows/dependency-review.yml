@@ -26,11 +26,8 @@ jobs:
           # Fail on high or critical vulnerabilities
           fail-on-severity: high
           
-          # Allow these licenses
+          # Allow these licenses (permissive open source licenses)
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
-          
-          # Deny these licenses
-          deny-licenses: GPL-2.0, GPL-3.0, LGPL-2.0, LGPL-3.0, AGPL-3.0
           
           # Comment on PR with results
           comment-summary-in-pr: always

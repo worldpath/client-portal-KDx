@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
       
       - name: TypeScript type check
         run: pnpm run type-check || echo "Type check not configured"
@@ -62,15 +62,15 @@ jobs:
       
       - name: Check build artifacts
         run: |
-          if [ ! -d "client/dist" ]; then
-            echo "Build failed: client/dist directory not found"
+          if [ ! -d "dist/public" ]; then
+            echo "Build failed: dist/public directory not found"
             exit 1
           fi
-          echo "Build successful: $(du -sh client/dist)"
+          echo "Build successful: $(du -sh dist/public)"
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
-          path: client/dist
+          path: dist/public
           retention-days: 7

@@ -1,0 +1,250 @@
+name: "CodeQL Security Analysis"
+
+# CodeQL analyzes code for security vulnerabilities and coding errors
+# Detects: SQL injection, XSS, authentication bypass, path traversal, etc.
+# Documentation: https://codeql.github.com/docs/
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly scan on Monday at 6:00 AM UTC (1:00 AM ET)
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    # Allow manual trigger
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  analyze:
+    name: Analyze Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript' ]
+        # CodeQL supports: 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby'
+        # We use 'javascript' which covers both JavaScript and TypeScript
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for better analysis
+          fetch-depth: 0
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          
+          # Use security-extended query suite for comprehensive scanning
+          # Options: default, security-extended, security-and-quality
+          queries: security-extended
+          
+          # Custom configuration file (optional)
+          config-file: ./.github/codeql/codeql-config.yml
+          
+          # Enable debug mode for troubleshooting (optional)
+          # debug: true
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          cd client && pnpm install --frozen-lockfile
+      
+      # Autobuild attempts to build any compiled languages
+      # For JavaScript/TypeScript, this step analyzes the code as-is
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      
+      # Alternative: Manual build steps if autobuild doesn't work
+      # - name: Build project
+      #   run: |
+      #     pnpm run build
+      #     cd client && pnpm run build
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          # Upload results to GitHub Security tab
+          category: "/language:${{matrix.language}}"
+          
+          # Upload SARIF file as artifact
+          upload: true
+          
+          # Fail workflow if vulnerabilities found (optional)
+          # fail-on: error
+      
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ../results
+          category: codeql-${{ matrix.language }}
+      
+      - name: Comment on PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultsPath = '../results';
+            
+            // Check if results exist
+            if (!fs.existsSync(resultsPath)) {
+              console.log('No CodeQL results found');
+              return;
+            }
+            
+            // Post comment on PR
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ CodeQL security analysis completed. Check the Security tab for detailed results.'
+            });
+
+# ============================================
+# CodeQL Analysis Configuration
+# ============================================
+#
+# This workflow performs automated security analysis using CodeQL,
+# GitHub's semantic code analysis engine.
+#
+# ============================================
+# Scan Schedule
+# ============================================
+#
+# - On push to main/develop branches
+# - On pull requests to main/develop
+# - Weekly scheduled scan (Mondays 6:00 AM UTC)
+# - Manual trigger available
+#
+# ============================================
+# Query Suite: security-extended
+# ============================================
+#
+# Detects vulnerabilities including:
+#
+# **Injection Attacks:**
+# - SQL injection
+# - NoSQL injection
+# - Command injection
+# - Code injection
+# - LDAP injection
+#
+# **Cross-Site Scripting (XSS):**
+# - Reflected XSS
+# - Stored XSS
+# - DOM-based XSS
+#
+# **Authentication & Authorization:**
+# - Authentication bypass
+# - Broken authentication
+# - Insecure session management
+# - Missing authorization checks
+# - Privilege escalation
+#
+# **Data Exposure:**
+# - Sensitive data exposure
+# - Information disclosure
+# - Cleartext storage of sensitive data
+# - Cleartext transmission
+#
+# **Path Traversal:**
+# - Directory traversal
+# - Path injection
+# - Arbitrary file access
+#
+# **Cryptography:**
+# - Weak cryptographic algorithms
+# - Insecure random number generation
+# - Hardcoded credentials
+# - Weak password requirements
+#
+# **Server-Side Request Forgery (SSRF):**
+# - SSRF vulnerabilities
+# - Unvalidated redirects
+#
+# **Deserialization:**
+# - Insecure deserialization
+# - Unsafe object construction
+#
+# **Regular Expression:**
+# - ReDoS (Regular Expression Denial of Service)
+# - Inefficient regular expressions
+#
+# **Prototype Pollution:**
+# - Prototype pollution vulnerabilities
+# - Object injection
+#
+# **XML External Entity (XXE):**
+# - XXE injection
+# - XML bomb attacks
+#
+# **Cross-Site Request Forgery (CSRF):**
+# - Missing CSRF protection
+# - Weak CSRF tokens
+#
+# ============================================
+# Results Location
+# ============================================
+#
+# - GitHub Security tab → Code scanning alerts
+# - Pull request checks (for PR scans)
+# - SARIF file uploaded as artifact
+#
+# ============================================
+# False Positives
+# ============================================
+#
+# If CodeQL reports false positives:
+#
+# 1. Review the alert in Security tab
+# 2. If confirmed false positive, dismiss with reason
+# 3. Consider adding suppression comment in code:
+#    // codeql[javascript/sql-injection]
+# 4. Or configure in .github/codeql/codeql-config.yml
+#
+# ============================================
+# Performance
+# ============================================
+#
+# - Analysis time: 5-15 minutes (depends on codebase size)
+# - Runs in parallel with other CI checks
+# - Does not block PR merges (informational)
+#
+# ============================================
+# Enabling GitHub Advanced Security
+# ============================================
+#
+# For private repositories, GitHub Advanced Security
+# must be enabled:
+#
+# 1. Go to repository Settings
+# 2. Security & analysis
+# 3. Enable "GitHub Advanced Security"
+# 4. Enable "Code scanning"
+#
+# Public repositories have this enabled by default.
+#

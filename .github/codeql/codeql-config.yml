@@ -1,0 +1,206 @@
+# CodeQL Configuration for KDx Portal
+# Custom configuration for security analysis
+# Documentation: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning
+
+name: "KDx Portal Security Analysis"
+
+# Disable default queries and use custom query suite
+disable-default-queries: false
+
+# Query suites to run
+# Options: code-scanning, security-extended, security-and-quality
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+
+# Additional query packs from GitHub
+packs:
+  - codeql/javascript-queries
+
+# Paths to include in analysis
+paths:
+  - server
+  - client/src
+  - shared
+  - drizzle
+
+# Paths to exclude from analysis
+paths-ignore:
+  - '**/node_modules'
+  - '**/dist'
+  - '**/build'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - '**/*.spec.tsx'
+  - '**/coverage'
+  - '**/.next'
+  - '**/public'
+  - '**/deployment/scripts'
+  - '**/*.config.js'
+  - '**/*.config.ts'
+
+# Query filters - customize which queries to run
+query-filters:
+  # Exclude specific queries by ID (if needed)
+  # - exclude:
+  #     id: js/sql-injection
+  
+  # Include only specific severity levels
+  - include:
+      kind:
+        - problem
+        - path-problem
+      tags:
+        - security
+        - external/cwe
+
+# Custom queries (if you have your own)
+# queries:
+#   - name: Custom security queries
+#     uses: ./.github/codeql/custom-queries
+
+# ============================================
+# Path Configuration
+# ============================================
+#
+# **Included Paths:**
+# - server/          - Backend API and business logic
+# - client/src/      - Frontend React application
+# - shared/          - Shared types and utilities
+# - drizzle/         - Database schema
+#
+# **Excluded Paths:**
+# - node_modules/    - Third-party dependencies
+# - dist/build/      - Build artifacts
+# - Test files       - Unit and integration tests
+# - Config files     - Build configuration
+# - Deployment       - Deployment scripts
+#
+# ============================================
+# Query Suites
+# ============================================
+#
+# **security-extended:**
+# - All security queries
+# - Includes experimental queries
+# - Higher false positive rate
+# - More comprehensive coverage
+#
+# **security-and-quality:**
+# - Security queries + code quality
+# - Includes maintainability checks
+# - Performance issues
+# - Best practice violations
+#
+# ============================================
+# Severity Levels
+# ============================================
+#
+# CodeQL assigns severity levels:
+# - Critical: Immediate action required
+# - High: Should be fixed soon
+# - Medium: Should be reviewed
+# - Low: Nice to fix
+# - Note: Informational
+#
+# ============================================
+# CWE Coverage
+# ============================================
+#
+# Common Weakness Enumeration (CWE) categories:
+#
+# **CWE-89:** SQL Injection
+# **CWE-79:** Cross-site Scripting (XSS)
+# **CWE-78:** OS Command Injection
+# **CWE-22:** Path Traversal
+# **CWE-352:** CSRF
+# **CWE-601:** Open Redirect
+# **CWE-918:** SSRF
+# **CWE-502:** Deserialization
+# **CWE-798:** Hardcoded Credentials
+# **CWE-327:** Weak Cryptography
+# **CWE-326:** Inadequate Encryption
+# **CWE-287:** Authentication Bypass
+# **CWE-862:** Missing Authorization
+# **CWE-863:** Incorrect Authorization
+# **CWE-200:** Information Exposure
+# **CWE-209:** Error Message Info Leak
+# **CWE-611:** XXE Injection
+# **CWE-1321:** Prototype Pollution
+# **CWE-400:** Resource Exhaustion (ReDoS)
+#
+# ============================================
+# Custom Query Development
+# ============================================
+#
+# To add custom queries:
+#
+# 1. Create .ql file in .github/codeql/custom-queries/
+# 2. Reference in this config file
+# 3. Test locally with CodeQL CLI
+# 4. Commit and push
+#
+# Example custom query structure:
+#
+# /**
+#  * @name Custom security check
+#  * @description Detects custom security pattern
+#  * @kind problem
+#  * @problem.severity warning
+#  * @security-severity 7.5
+#  * @precision high
+#  * @id js/custom-check
+#  * @tags security
+#  *       external/cwe/cwe-xxx
+#  */
+#
+# import javascript
+#
+# from DataFlow::Node source, DataFlow::Node sink
+# where
+#   // Query logic here
+# select sink, "Security issue detected"
+#
+# ============================================
+# Suppressing False Positives
+# ============================================
+#
+# Method 1: Inline comment in code
+# // codeql[javascript/sql-injection]
+# const query = userInput;
+#
+# Method 2: Dismiss in GitHub UI
+# Security tab → Code scanning alerts → Dismiss
+#
+# Method 3: Exclude query in this config
+# query-filters:
+#   - exclude:
+#       id: js/specific-query-id
+#
+# ============================================
+# Performance Tuning
+# ============================================
+#
+# If analysis is slow:
+#
+# 1. Exclude more paths (node_modules, tests)
+# 2. Use fewer query suites
+# 3. Increase timeout in workflow
+# 4. Split into multiple jobs
+#
+# ============================================
+# Integration with CI/CD
+# ============================================
+#
+# CodeQL runs:
+# - On every push to main/develop
+# - On every pull request
+# - Weekly scheduled scan
+# - Manual trigger
+#
+# Results appear in:
+# - GitHub Security tab
+# - Pull request checks
+# - Email notifications
+#

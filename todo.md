@@ -866,3 +866,15 @@
 - [x] Create dependency management documentation
 - [x] Document Dependabot PR review process
 - [x] Configure automated security alerts
+
+## GitHub Advanced Security - CodeQL
+- [x] Create CodeQL analysis workflow
+- [x] Configure JavaScript/TypeScript scanning
+- [x] Configure security query suite
+- [x] Set up scheduled scanning
+- [x] Configure scan on push and PR
+- [x] Create CodeQL configuration file
+- [x] Document CodeQL setup process
+- [x] Document vulnerability remediation workflow
+- [x] Configure SARIF upload for results
+- [x] Set up security alerts integration

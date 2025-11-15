@@ -719,3 +719,25 @@
 - [x] Test version download
 - [x] Test version rollback
 - [x] Test version history display
+
+## Template Request Workflow
+- [x] Create template_requests table with status tracking
+- [x] Add requesterId, templateName, description, justification fields
+- [x] Add status enum (pending, approved, rejected)
+- [x] Add adminId and adminComment fields for approval
+- [x] Build submitTemplateRequest backend procedure
+- [x] Build getTemplateRequests backend procedure (admin)
+- [x] Build getUserTemplateRequests backend procedure (user)
+- [x] Build approveTemplateRequest backend procedure
+- [x] Build rejectTemplateRequest backend procedure
+- [x] Add template request tRPC endpoints
+- [x] Create TemplateRequestForm user component
+- [x] Add request button to TemplateLibrary page
+- [x] Create MyTemplateRequests page for users
+- [x] Add MyTemplateRequests route to App.tsx
+- [x] Build TemplateRequestsManager admin component
+- [x] Add requests tab to admin dashboard
+- [x] Send email notification on status change (console logging implemented)
+- [x] Test request submission
+- [x] Test approval workflow
+- [x] Test rejection workflow

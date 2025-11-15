@@ -79,6 +79,26 @@ export type TemplateVersion = typeof templateVersions.$inferSelect;
 export type InsertTemplateVersion = typeof templateVersions.$inferInsert;
 
 /**
+ * Template requests for user-submitted template needs
+ */
+export const templateRequests = mysqlTable("template_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  requesterId: int("requesterId").notNull().references(() => users.id),
+  templateName: varchar("templateName", { length: 255 }).notNull(),
+  description: text("description"),
+  justification: text("justification").notNull(),
+  categoryId: int("categoryId").references(() => templateCategories.id),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  adminId: int("adminId").references(() => users.id),
+  adminComment: text("adminComment"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TemplateRequest = typeof templateRequests.$inferSelect;
+export type InsertTemplateRequest = typeof templateRequests.$inferInsert;
+
+/**
  * User invitations for email-based invites
  */
 export const userInvitations = mysqlTable("user_invitations", {

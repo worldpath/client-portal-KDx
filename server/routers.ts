@@ -1286,6 +1286,72 @@ export const appRouter = router({
         const { getTemplateWithCategory } = await import('./templateManagement');
         return await getTemplateWithCategory(input.id);
       }),
+
+    // Template requests
+    submitRequest: protectedProcedure
+      .input(z.object({
+        templateName: z.string(),
+        description: z.string().optional(),
+        justification: z.string(),
+        categoryId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { submitTemplateRequest } = await import('./templateRequests');
+        return submitTemplateRequest({
+          requesterId: ctx.user.id,
+          ...input,
+        });
+      }),
+
+    getRequests: protectedProcedure
+      .input(z.object({
+        status: z.enum(["pending", "approved", "rejected"]).optional(),
+        myRequests: z.boolean().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin" && !input.myRequests) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+        }
+        const { getTemplateRequests } = await import('./templateRequests');
+        return getTemplateRequests({
+          status: input.status,
+          requesterId: input.myRequests ? ctx.user.id : undefined,
+        });
+      }),
+
+    approveRequest: protectedProcedure
+      .input(z.object({
+        requestId: z.number(),
+        adminComment: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+        }
+        const { approveTemplateRequest } = await import('./templateRequests');
+        return approveTemplateRequest({
+          requestId: input.requestId,
+          adminId: ctx.user.id,
+          adminComment: input.adminComment,
+        });
+      }),
+
+    rejectRequest: protectedProcedure
+      .input(z.object({
+        requestId: z.number(),
+        adminComment: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+        }
+        const { rejectTemplateRequest } = await import('./templateRequests');
+        return rejectTemplateRequest({
+          requestId: input.requestId,
+          adminId: ctx.user.id,
+          adminComment: input.adminComment,
+        });
+      }),
   }),
 
   // ============ FILE SEARCH ============

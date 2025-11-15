@@ -13,6 +13,7 @@ import {
 import { Loader2, FileText, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import TemplateVersionHistory from "@/components/TemplateVersionHistory";
+import TemplateRequestForm from "@/components/TemplateRequestForm";
 
 export default function TemplateLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,11 +71,14 @@ export default function TemplateLibrary() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Template Library</h1>
-        <p className="text-muted-foreground mt-1">
-          Download standard forms, checklists, and protocols
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Template Library</h1>
+          <p className="text-muted-foreground mt-1">
+            Download standard forms, checklists, and protocols
+          </p>
+        </div>
+        <TemplateRequestForm />
       </div>
 
       {/* Search and Filter */}

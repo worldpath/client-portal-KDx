@@ -1286,6 +1286,26 @@ export const appRouter = router({
         return await getTemplateWithCategory(input.id);
       }),
 
+    regenerateThumbnail: adminProcedure
+      .input(z.object({ templateId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { regenerateTemplateThumbnail } = await import('./regenerateThumbnails');
+        const success = await regenerateTemplateThumbnail(input.templateId);
+        return { success };
+      }),
+
+    regenerateAllThumbnails: adminProcedure
+      .mutation(async () => {
+        const { regenerateAllThumbnails } = await import('./regenerateThumbnails');
+        return await regenerateAllThumbnails();
+      }),
+
+    regenerateSvgThumbnails: adminProcedure
+      .mutation(async () => {
+        const { regenerateSvgThumbnails } = await import('./regenerateThumbnails');
+        return await regenerateSvgThumbnails();
+      }),
+
     // Template requests
     submitRequest: protectedProcedure
       .input(z.object({

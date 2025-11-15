@@ -763,3 +763,13 @@
 - [x] Update TemplateManager to display thumbnails
 - [x] Add fallback icons for templates without thumbnails
 - [ ] Test thumbnail generation with various document types
+
+## Real PDF Preview Images
+- [x] Install pdf2pic or sharp with pdf support for real PDF rendering
+- [x] Update thumbnailService to generate actual first-page images from PDFs
+- [x] Convert PDF first page to PNG/JPEG format
+- [x] Resize preview images to appropriate thumbnail dimensions
+- [x] Upload real preview images to S3
+- [ ] Test with various PDF documents (forms, reports, protocols)
+- [x] Add error handling for corrupted or unsupported PDFs
+- [x] Create admin endpoint to regenerate thumbnails for existing templates

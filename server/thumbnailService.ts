@@ -1,15 +1,20 @@
-import { PDFDocument } from 'pdf-lib';
+import { fromPath } from 'pdf2pic';
 import { storagePut } from './storage';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 /**
- * Generate a thumbnail from a PDF file
- * For now, we'll use a simple approach: extract first page info and create a placeholder
- * In production, you might want to use pdf2pic or similar for actual image rendering
+ * Generate a real thumbnail image from a PDF file's first page
  */
 export async function generatePdfThumbnail(
   pdfUrl: string,
   fileName: string
 ): Promise<{ thumbnailUrl: string; thumbnailKey: string } | null> {
+  const tempDir = os.tmpdir();
+  const tempPdfPath = path.join(tempDir, `temp-${Date.now()}-${fileName}`);
+  const outputDir = path.join(tempDir, `pdf-output-${Date.now()}`);
+
   try {
     // Fetch the PDF file
     const response = await fetch(pdfUrl);
@@ -19,29 +24,54 @@ export async function generatePdfThumbnail(
     }
 
     const pdfBuffer = await response.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
     
-    // Get first page dimensions
-    const pages = pdfDoc.getPages();
-    if (pages.length === 0) {
-      console.error('PDF has no pages');
+    // Save PDF to temp file
+    fs.writeFileSync(tempPdfPath, Buffer.from(pdfBuffer));
+
+    // Create output directory
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Configure pdf2pic to convert first page to PNG
+    const options = {
+      density: 150,           // DPI - higher = better quality but larger file
+      saveFilename: 'thumbnail',
+      savePath: outputDir,
+      format: 'png',
+      width: 400,            // Width in pixels
+      height: 520,           // Height in pixels (roughly A4 ratio)
+    };
+
+    const convert = fromPath(tempPdfPath, options);
+    
+    // Convert only the first page
+    const result = await convert(1, { responseType: 'image' });
+
+    if (!result || !result.path) {
+      console.error('Failed to convert PDF to image');
       return null;
     }
 
-    const firstPage = pages[0];
-    const { width, height } = firstPage.getSize();
+    // Read the generated image
+    const thumbnailBuffer = fs.readFileSync(result.path);
 
-    // Create a simple SVG placeholder thumbnail
-    // In production, you'd use a proper PDF-to-image converter
-    const thumbnailSvg = createPdfPlaceholderSvg(width, height, fileName);
-    
     // Upload thumbnail to S3
-    const thumbnailKey = `thumbnails/${Date.now()}-${fileName.replace(/\.[^/.]+$/, '')}.svg`;
+    const thumbnailKey = `thumbnails/${Date.now()}-${fileName.replace(/\.[^/.]+$/, '')}.png`;
     const uploadResult = await storagePut(
       thumbnailKey,
-      Buffer.from(thumbnailSvg),
-      'image/svg+xml'
+      thumbnailBuffer,
+      'image/png'
     );
+
+    // Clean up temp files
+    try {
+      fs.unlinkSync(tempPdfPath);
+      fs.unlinkSync(result.path);
+      fs.rmdirSync(outputDir);
+    } catch (cleanupError) {
+      console.warn('Failed to clean up temp files:', cleanupError);
+    }
 
     return {
       thumbnailUrl: uploadResult.url,
@@ -49,39 +79,21 @@ export async function generatePdfThumbnail(
     };
   } catch (error) {
     console.error('Error generating PDF thumbnail:', error);
+    
+    // Clean up temp files on error
+    try {
+      if (fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath);
+      if (fs.existsSync(outputDir)) {
+        const files = fs.readdirSync(outputDir);
+        files.forEach(file => fs.unlinkSync(path.join(outputDir, file)));
+        fs.rmdirSync(outputDir);
+      }
+    } catch (cleanupError) {
+      console.warn('Failed to clean up temp files after error:', cleanupError);
+    }
+
     return null;
   }
-}
-
-/**
- * Create an SVG placeholder for PDF documents
- */
-function createPdfPlaceholderSvg(width: number, height: number, fileName: string): string {
-  const aspectRatio = width / height;
-  const thumbnailWidth = 200;
-  const thumbnailHeight = thumbnailWidth / aspectRatio;
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${thumbnailWidth}" height="${thumbnailHeight}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#f8f9fa;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#e9ecef;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#grad)" stroke="#dee2e6" stroke-width="2"/>
-  <g transform="translate(${thumbnailWidth / 2}, ${thumbnailHeight / 2 - 20})">
-    <path d="M-20,-30 L-20,30 L10,30 L10,0 L-10,0 L-10,-30 Z M-10,-30 L10,0 L-10,0 Z" 
-          fill="#6c757d" opacity="0.6"/>
-  </g>
-  <text x="50%" y="${thumbnailHeight - 15}" 
-        text-anchor="middle" 
-        font-family="Arial, sans-serif" 
-        font-size="10" 
-        fill="#495057">
-    PDF Document
-  </text>
-</svg>`;
 }
 
 /**
@@ -160,12 +172,12 @@ export async function generateThumbnail(
     return null;
   }
 
-  // PDF files
+  // PDF files - generate real preview
   if (mimeType === 'application/pdf') {
     return await generatePdfThumbnail(fileUrl, fileName);
   }
 
-  // Word documents
+  // Word documents - use placeholder
   if (
     mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
     mimeType === 'application/msword'

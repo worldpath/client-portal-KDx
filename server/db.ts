@@ -213,7 +213,9 @@ export async function createFolder(folder: InsertFolder) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(folders).values(folder);
-  return result;
+  // Return the inserted folder ID
+  const insertId = Number(result[0].insertId);
+  return { insertId };
 }
 
 export async function getFolderById(id: number) {

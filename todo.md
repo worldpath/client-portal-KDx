@@ -617,3 +617,8 @@
 - [x] Restrict bulk assignment to admin users only
 - [x] Test bulk assignment with multiple files
 - [x] Test error handling for partial failures
+
+## Bug Fixes
+- [x] Fix folder creation audit log NaN entityId bug
+- [x] Verify folder creation works correctly
+- [x] Test audit log shows correct folder ID

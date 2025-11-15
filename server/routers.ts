@@ -129,7 +129,7 @@ export const appRouter = router({
           createdBy: ctx.user.id,
         });
 
-        const folderId = Number((result as any).insertId);
+        const folderId = result.insertId;
         await logAction(ctx.user.id, 'folder_create', 'folder', folderId, { name: input.name, parentId: input.parentId }, ctx.req);
 
         return { success: true, folderId };

@@ -280,6 +280,49 @@ For issues related to:
 
 Proprietary - KDx Diagnostics
 
+## 🚀 Production Deployment
+
+### DigitalOcean Deployment
+
+Complete deployment scripts and documentation are provided in the `deployment/` directory for production hosting on DigitalOcean.
+
+```bash
+# Run initial server setup
+./deployment/scripts/01-initial-setup.sh
+
+# Deploy application
+./deployment/scripts/02-deploy-application.sh
+
+# Setup SSL certificates
+./deployment/scripts/03-setup-ssl.sh
+
+# Configure monitoring
+./deployment/scripts/04-setup-monitoring.sh
+
+# Setup automated backups
+./deployment/scripts/05-setup-backups.sh
+```
+
+See `deployment/docs/DEPLOYMENT_GUIDE.md` for detailed instructions.
+
+### CI/CD Pipeline
+
+GitHub Actions workflows are configured for:
+- **Continuous Integration** - Automated testing, linting, and type checking
+- **Continuous Deployment** - Automated deployment to production
+- **Security Scanning** - CodeQL analysis and Dependabot updates
+- **Dependency Review** - Automated vulnerability scanning
+
+See `deployment/docs/CICD_SETUP.md` for configuration details.
+
+## 📖 Additional Documentation
+
+- **[Deployment Guide](deployment/docs/DEPLOYMENT_GUIDE.md)** - Complete deployment instructions
+- **[CI/CD Setup](deployment/docs/CICD_SETUP.md)** - GitHub Actions configuration
+- **[Branch Protection](deployment/docs/BRANCH_PROTECTION_SETUP.md)** - Branch protection rules
+- **[CodeQL Security](deployment/docs/CODEQL_SECURITY_SCANNING.md)** - Security scanning setup
+- **[Dependency Management](deployment/docs/DEPENDENCY_MANAGEMENT.md)** - Dependabot configuration
+
 ## Changelog
 
 ### Version 1.0.0 (Initial Release)

@@ -1,0 +1,1 @@
+ALTER TABLE `file_workflow_stage_progress` ADD `approvalComments` text;

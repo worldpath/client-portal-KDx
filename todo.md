@@ -550,3 +550,15 @@
 - [x] Test undo for approvals
 - [x] Test undo for rejections
 - [x] Test 5-minute window enforcement
+
+## Approval Comments Feature
+- [x] Add approvalComments field to file_workflow_stage_progress table (JSON array)
+- [x] Create database migration for approval comments field
+- [x] Update approveWorkflowStage to accept optional comment parameter
+- [x] Store approval comments with user ID and timestamp
+- [x] Update approveStage tRPC endpoint to accept comment
+- [x] Add approval comment dialog to FileWorkflowTimeline
+- [x] Display approval comments in workflow timeline
+- [x] Show comment author and timestamp
+- [x] Test approval with comments
+- [x] Test approval without comments (backward compatibility)

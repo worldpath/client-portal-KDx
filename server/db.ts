@@ -1962,7 +1962,8 @@ export async function getFileWorkflowProgress(fileId: number, userId?: number) {
 export async function approveWorkflowStage(
   workflowInstanceId: number,
   stageId: number,
-  reviewerId: number
+  reviewerId: number,
+  comment?: string
 ) {
   const db = await getDb();
   if (!db) return null;
@@ -1985,6 +1986,16 @@ export async function approveWorkflowStage(
   const approvedBy = currentProgress.approvedBy ? JSON.parse(currentProgress.approvedBy) : [];
   approvedBy.push(reviewerId);
 
+  // Handle approval comments
+  const approvalComments = currentProgress.approvalComments ? JSON.parse(currentProgress.approvalComments) : [];
+  if (comment && comment.trim()) {
+    approvalComments.push({
+      userId: reviewerId,
+      comment: comment.trim(),
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   // Get stage info
   const stage = await db
     .select()
@@ -2003,6 +2014,7 @@ export async function approveWorkflowStage(
     .update(fileWorkflowStageProgress)
     .set({
       approvedBy: JSON.stringify(approvedBy),
+      approvalComments: JSON.stringify(approvalComments),
       status: isStageComplete ? "approved" : "in_progress",
       completedAt: isStageComplete ? now : null,
       actionTimestamp: now,

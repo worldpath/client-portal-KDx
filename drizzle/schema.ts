@@ -338,6 +338,7 @@ export const fileWorkflowStageProgress = mysqlTable("file_workflow_stage_progres
   status: mysqlEnum("status", ["pending", "in_progress", "approved", "rejected"]).default("pending").notNull(),
   assignedReviewers: text("assignedReviewers"), // JSON array of reviewer IDs
   approvedBy: text("approvedBy"), // JSON array of reviewer IDs who approved
+  approvalComments: text("approvalComments"), // JSON array of { userId, comment, timestamp }
   rejectedBy: int("rejectedBy"), // Reviewer ID who rejected
   rejectionReason: text("rejectionReason"),
   startedAt: timestamp("startedAt"),

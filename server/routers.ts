@@ -2129,12 +2129,14 @@ export const appRouter = router({
       .input(z.object({
         workflowInstanceId: z.number(),
         stageId: z.number(),
+        comment: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         return await db.approveWorkflowStage(
           input.workflowInstanceId,
           input.stageId,
-          ctx.user.id
+          ctx.user.id,
+          input.comment
         );
       }),
 

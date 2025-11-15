@@ -16,7 +16,10 @@ interface FileWorkflowTimelineProps {
 export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelineProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [approvalComment, setApprovalComment] = useState("");
   const [selectedStageId, setSelectedStageId] = useState<number | null>(null);
+  const [selectedWorkflowInstanceId, setSelectedWorkflowInstanceId] = useState<number | null>(null);
   const [undoTimers, setUndoTimers] = useState<Record<number, number>>({});
 
   const utils = trpc.useUtils();
@@ -28,6 +31,10 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
   const approveStage = trpc.workflows.approveStage.useMutation({
     onSuccess: () => {
       toast.success("Stage approved successfully");
+      setShowApproveDialog(false);
+      setApprovalComment("");
+      setSelectedStageId(null);
+      setSelectedWorkflowInstanceId(null);
       utils.workflows.getFileProgress.invalidate({ fileId });
     },
     onError: (error) => {
@@ -81,8 +88,19 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
     return () => clearInterval(interval);
   }, [workflowProgress]);
 
-  const handleApprove = (workflowInstanceId: number, stageId: number) => {
-    approveStage.mutate({ workflowInstanceId, stageId });
+  const handleApproveClick = (workflowInstanceId: number, stageId: number) => {
+    setSelectedWorkflowInstanceId(workflowInstanceId);
+    setSelectedStageId(stageId);
+    setShowApproveDialog(true);
+  };
+
+  const handleApproveConfirm = () => {
+    if (!selectedWorkflowInstanceId || !selectedStageId) return;
+    approveStage.mutate({
+      workflowInstanceId: selectedWorkflowInstanceId,
+      stageId: selectedStageId,
+      comment: approvalComment.trim() || undefined,
+    });
   };
 
   const handleRejectClick = (stageId: number) => {
@@ -206,7 +224,7 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => handleApprove(workflowProgress.instance.id, progressItem.stageId)}
+                                onClick={() => handleApproveClick(workflowProgress.instance.id, progressItem.stageId)}
                                 disabled={approveStage.isPending}
                               >
                                 {approveStage.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -256,10 +274,25 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
 
                       {/* Approval/Rejection details */}
                       {isCompleted && progressItem.approvedBy && (
-                        <p className="text-sm text-green-700">
-                          Approved by: {progressItem.approvedBy}
-                          {progressItem.completedAt && ` on ${new Date(progressItem.completedAt).toLocaleDateString()}`}
-                        </p>
+                        <div className="space-y-2">
+                          <p className="text-sm text-green-700">
+                            Approved by: {progressItem.approvedBy}
+                            {progressItem.completedAt && ` on ${new Date(progressItem.completedAt).toLocaleDateString()}`}
+                          </p>
+                          {/* Approval comments */}
+                          {progressItem.approvalComments && JSON.parse(progressItem.approvalComments).length > 0 && (
+                            <div className="space-y-1 pl-4 border-l-2 border-green-200">
+                              {JSON.parse(progressItem.approvalComments).map((comment: any, idx: number) => (
+                                <div key={idx} className="text-sm">
+                                  <p className="text-muted-foreground italic">"{comment.comment}"</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    — {new Date(comment.timestamp).toLocaleString()}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )}
                       {isRejected && progressItem.rejectedBy && (
                         <div className="text-sm text-red-700">
@@ -277,6 +310,42 @@ export default function FileWorkflowTimeline({ fileId }: FileWorkflowTimelinePro
           </div>
         </CardContent>
       </Card>
+
+      {/* Approve Dialog */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Stage</DialogTitle>
+            <DialogDescription>
+              Add an optional comment to your approval (recommended for transparency)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="approval-comment">Comment (Optional)</Label>
+              <Textarea
+                id="approval-comment"
+                placeholder="Add context, notes, or feedback about your approval..."
+                value={approvalComment}
+                onChange={(e) => setApprovalComment(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApproveConfirm}
+              disabled={approveStage.isPending}
+            >
+              {approveStage.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
